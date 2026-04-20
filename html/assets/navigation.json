@@ -1,0 +1,1280 @@
+[
+  {
+    "title": "Doku Tool",
+    "file": "Doku Tool/index.md",
+    "slug": "doku-tool",
+    "children": [
+      {
+        "title": "Markdown Cheat Sheet",
+        "file": "Doku Tool/_01_Markdown-CheatSheet.md",
+        "slug": "markdown-cheat-sheet",
+        "children": [
+          {
+            "title": "Überschriften",
+            "slug": "ueberschriften"
+          },
+          {
+            "title": "Absätze & Zeilenumbrüche",
+            "slug": "absaetze-zeilenumbrueche"
+          },
+          {
+            "title": "Hervorhebungen",
+            "slug": "hervorhebungen"
+          },
+          {
+            "title": "Listen",
+            "slug": "listen"
+          },
+          {
+            "title": "Ungeordnete Listen",
+            "slug": "ungeordnete-listen"
+          },
+          {
+            "title": "Geordnete Listen",
+            "slug": "geordnete-listen"
+          },
+          {
+            "title": "Links & Bilder",
+            "slug": "links-bilder"
+          },
+          {
+            "title": "Links",
+            "slug": "links"
+          },
+          {
+            "title": "Bilder",
+            "slug": "bilder"
+          },
+          {
+            "title": "Zitate (Blockquotes)",
+            "slug": "zitate-blockquotes"
+          },
+          {
+            "title": "Code",
+            "slug": "code"
+          },
+          {
+            "title": "Inline-Code",
+            "slug": "inline-code"
+          },
+          {
+            "title": "Codeblöcke (fenced code blocks)",
+            "slug": "codebloecke-fenced-code-blocks"
+          },
+          {
+            "title": "Horizontale Linie",
+            "slug": "horizontale-linie"
+          },
+          {
+            "title": "Tabellen",
+            "slug": "tabellen"
+          },
+          {
+            "title": "Aufgabenlisten (Task-Lists)",
+            "slug": "aufgabenlisten-task-lists"
+          },
+          {
+            "title": "Inline-HTML (für Spezialfälle)",
+            "slug": "inline-html-fuer-spezialfaelle"
+          },
+          {
+            "title": "Escapes (Sonderzeichen anzeigen)",
+            "slug": "escapes-sonderzeichen-anzeigen"
+          },
+          {
+            "title": "(Optional) Formeln mit LaTeX-Syntax",
+            "slug": "optional-formeln-mit-latex-syntax"
+          },
+          {
+            "title": "Praktische Tipps",
+            "slug": "praktische-tipps"
+          }
+        ],
+        "type": 1
+      },
+      {
+        "title": "How to Use Doku Tool",
+        "file": "Doku Tool/_02_how-to-use-doku-tool.md",
+        "slug": "how-to-use-doku-tool",
+        "children": [
+          {
+            "title": "1. Markdown-Export & Suchindex erzeugen (`buildDocs.ps1`)",
+            "slug": "1-markdown-export-suchindex-erzeugen-builddocsps1"
+          },
+          {
+            "title": "Parameter",
+            "slug": "parameter"
+          },
+          {
+            "title": "Standardwerte",
+            "slug": "standardwerte"
+          },
+          {
+            "title": "Pfade",
+            "slug": "pfade"
+          },
+          {
+            "title": "Ablauf",
+            "slug": "ablauf"
+          },
+          {
+            "title": "Zweck",
+            "slug": "zweck"
+          },
+          {
+            "title": "Ausführung",
+            "slug": "ausfuehrung"
+          },
+          {
+            "title": "2. Marked.js aktualisieren (`updateMarked.ps1`)",
+            "slug": "2-markedjs-aktualisieren-updatemarkedps1"
+          },
+          {
+            "title": "Parameter",
+            "slug": "parameter"
+          },
+          {
+            "title": "Standardwerte",
+            "slug": "standardwerte"
+          },
+          {
+            "title": "Ablauf",
+            "slug": "ablauf"
+          },
+          {
+            "title": "Zweck",
+            "slug": "zweck"
+          },
+          {
+            "title": "Standardverwendung",
+            "slug": "standardverwendung"
+          },
+          {
+            "title": "Verwendung mit spezifischer Version",
+            "slug": "verwendung-mit-spezifischer-version"
+          },
+          {
+            "title": "Verwendung mit anderem Zielordner",
+            "slug": "verwendung-mit-anderem-zielordner"
+          },
+          {
+            "title": "3. Lokalen HTTP-Server starten (`startServer.ps1`)",
+            "slug": "3-lokalen-http-server-starten-startserverps1"
+          },
+          {
+            "title": "Parameter",
+            "slug": "parameter"
+          },
+          {
+            "title": "Standardwerte",
+            "slug": "standardwerte"
+          },
+          {
+            "title": "Funktionsweise",
+            "slug": "funktionsweise"
+          },
+          {
+            "title": "MIME-Type Unterstützung",
+            "slug": "mime-type-unterstuetzung"
+          },
+          {
+            "title": "Request-Verarbeitung",
+            "slug": "request-verarbeitung"
+          },
+          {
+            "title": "Response-Verhalten",
+            "slug": "response-verhalten"
+          },
+          {
+            "title": "Laufzeitverhalten",
+            "slug": "laufzeitverhalten"
+          },
+          {
+            "title": "4. Typischer Workflow",
+            "slug": "4-typischer-workflow"
+          },
+          {
+            "title": "5. Troubleshooting",
+            "slug": "5-troubleshooting"
+          }
+        ],
+        "type": 1
+      }
+    ],
+    "type": 2
+  },
+  {
+    "title": "Projekts",
+    "file": "Projekts/index.md",
+    "slug": "projekts",
+    "children": [
+      {
+        "title": "Kemp Loadbalancer NLB",
+        "file": "Projekts/Kemp Loadbalancer NLB/index.md",
+        "slug": "kemp-loadbalancer-nlb",
+        "children": [
+          {
+            "title": "Allgemeine Informationen",
+            "file": "Projekts/Kemp Loadbalancer NLB/01_info.md",
+            "slug": "allgemeine-informationen",
+            "children": [
+              {
+                "title": "IP Adressen {#nlb_ips}",
+                "slug": "ip-adressen-nlbips"
+              },
+              {
+                "title": "Identifizierung des aktiven Knotens {#nlb_haState}",
+                "slug": "identifizierung-des-aktiven-knotens-nlbhastate"
+              },
+              {
+                "title": "Bevorzugten NLB ändern {#nlb_preferredHA}",
+                "slug": "bevorzugten-nlb-aendern-nlbpreferredha"
+              },
+              {
+                "title": "Backup erstellen {#nlb_backup}",
+                "slug": "backup-erstellen-nlbbackup"
+              }
+            ],
+            "type": 1
+          },
+          {
+            "title": "Zertifikate erneuern",
+            "file": "Projekts/Kemp Loadbalancer NLB/02_certChange.md",
+            "slug": "zertifikate-erneuern",
+            "children": {
+              "title": "Vorgehen auf der Cluster‑IP",
+              "slug": "vorgehen-auf-der-clusterip"
+            },
+            "type": 1
+          },
+          {
+            "title": "Software aktualisieren",
+            "file": "Projekts/Kemp Loadbalancer NLB/03_softwareUpdate.md",
+            "slug": "software-aktualisieren",
+            "children": [
+              {
+                "title": "Voerbeitung",
+                "slug": "voerbeitung"
+              },
+              {
+                "title": "Update durchführen {#nlb_updateSoftware}",
+                "slug": "update-durchfuehren-nlbupdatesoftware"
+              },
+              {
+                "title": "Vorherige Software‑Version wiederherstellen {#nlb_restoreUpdate}",
+                "slug": "vorherige-softwareversion-wiederherstellen-nlbrestoreupdate"
+              }
+            ],
+            "type": 1
+          },
+          {
+            "title": "Addon aktualisieren",
+            "file": "Projekts/Kemp Loadbalancer NLB/04_addonUpdate.md",
+            "slug": "addon-aktualisieren",
+            "children": {
+              "title": "Vorgehen",
+              "slug": "vorgehen"
+            },
+            "type": 1
+          }
+        ],
+        "type": 2
+      },
+      {
+        "title": "Matrix42 Empirum",
+        "file": "Projekts/Matrix42 Empirum/index.md",
+        "slug": "matrix42-empirum",
+        "children": [
+          {
+            "title": "Administration",
+            "file": "Projekts/Matrix42 Empirum/Administration/index.md",
+            "slug": "administration",
+            "children": [
+              {
+                "title": "Firewall",
+                "file": "Projekts/Matrix42 Empirum/Administration/01_adm_Firewall.md",
+                "slug": "firewall",
+                "children": [
+                  {
+                    "title": "Verbindungen zwischen SDS und Clients",
+                    "slug": "verbindungen-zwischen-sds-und-clients"
+                  },
+                  {
+                    "title": "1. SDS → Clients",
+                    "slug": "1-sds-clients"
+                  },
+                  {
+                    "title": "2. Clients → SDS",
+                    "slug": "2-clients-sds"
+                  },
+                  {
+                    "title": "3. SDS ↔ Clients",
+                    "slug": "3-sds-clients"
+                  },
+                  {
+                    "title": "4. T1-PAW → SDS",
+                    "slug": "4-t1-paw-sds"
+                  },
+                  {
+                    "title": "5. SDS → DC",
+                    "slug": "5-sds-dc"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Hardwareprofile",
+                "file": "Projekts/Matrix42 Empirum/Administration/02_adm_Hardwareprofile.md",
+                "slug": "hardwareprofile",
+                "children": [
+                  {
+                    "title": "Neues HW-Profil anlegen",
+                    "slug": "neues-hw-profil-anlegen"
+                  },
+                  {
+                    "title": "Client-PC",
+                    "slug": "client-pc"
+                  },
+                  {
+                    "title": "Unter Treiberassistent",
+                    "slug": "unter-treiberassistent"
+                  },
+                  {
+                    "title": "PC installieren",
+                    "slug": "pc-installieren"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "WinPE",
+                "file": "Projekts/Matrix42 Empirum/Administration/03_adm_WinPE.md",
+                "slug": "winpe",
+                "children": [
+                  {
+                    "title": "ADK Update",
+                    "slug": "adk-update"
+                  },
+                  {
+                    "title": "Driver Pack",
+                    "slug": "driver-pack"
+                  },
+                  {
+                    "title": "WinPE updaten",
+                    "slug": "winpe-updaten"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Benutzer",
+                "file": "Projekts/Matrix42 Empirum/Administration/04_adm_User.md",
+                "slug": "benutzer",
+                "children": {
+                  "title": "`emp-agent`",
+                  "slug": "emp-agent"
+                },
+                "type": 1
+              },
+              {
+                "title": "Zertifikate",
+                "file": "Projekts/Matrix42 Empirum/Administration/05_adm_Cert.md",
+                "slug": "zertifikate",
+                "children": {
+                  "title": "Austauschen / Erneuern",
+                  "slug": "austauschen-/-erneuern"
+                },
+                "type": 1
+              }
+            ],
+            "type": 2
+          },
+          {
+            "title": "Paketierung",
+            "file": "Projekts/Matrix42 Empirum/Paketierung/index.md",
+            "slug": "paketierung",
+            "children": [
+              {
+                "title": "Setup.inf Standards",
+                "file": "Projekts/Matrix42 Empirum/Paketierung/01_SetupDefaults.md",
+                "slug": "setupinf-standards",
+                "children": [
+                  {
+                    "title": "Window Style",
+                    "slug": "window-style"
+                  },
+                  {
+                    "title": "Pfade",
+                    "slug": "pfade"
+                  },
+                  {
+                    "title": "RegOnUninstall",
+                    "slug": "regonuninstall"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Setup.inf",
+                "file": "Projekts/Matrix42 Empirum/Paketierung/02_SetupInf.md",
+                "slug": "setupinf",
+                "children": [
+                  {
+                    "title": "IF-Abfragen",
+                    "slug": "if-abfragen"
+                  },
+                  {
+                    "title": "Löschen",
+                    "slug": "loeschen"
+                  },
+                  {
+                    "title": "Bei Installation",
+                    "slug": "bei-installation"
+                  },
+                  {
+                    "title": "Bei Deinstallation",
+                    "slug": "bei-deinstallation"
+                  },
+                  {
+                    "title": "Prozesse",
+                    "slug": "prozesse"
+                  },
+                  {
+                    "title": "Syntax",
+                    "slug": "syntax"
+                  },
+                  {
+                    "title": "Beispiel Firefox",
+                    "slug": "beispiel-firefox"
+                  },
+                  {
+                    "title": "Zertifikate",
+                    "slug": "zertifikate"
+                  },
+                  {
+                    "title": "Erstellen von Variablen",
+                    "slug": "erstellen-von-variablen"
+                  },
+                  {
+                    "title": "Methode",
+                    "slug": "methode"
+                  },
+                  {
+                    "title": "Zusätzliche Informationen",
+                    "slug": "zusaetzliche-informationen"
+                  },
+                  {
+                    "title": "Fehlerbehandlung",
+                    "slug": "fehlerbehandlung"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Setup.inf MSI",
+                "file": "Projekts/Matrix42 Empirum/Paketierung/03_SetupMSI.md",
+                "slug": "setupinf-msi",
+                "children": [
+                  {
+                    "title": "Wichtige MSI-Parameter",
+                    "slug": "wichtige-msi-parameter"
+                  },
+                  {
+                    "title": "PowerShell",
+                    "slug": "powershell"
+                  },
+                  {
+                    "title": "MSI-Installationen auslesen",
+                    "slug": "msi-installationen-auslesen"
+                  },
+                  {
+                    "title": "Uninstall",
+                    "slug": "uninstall"
+                  },
+                  {
+                    "title": "Reboot prüfen",
+                    "slug": "reboot-pruefen"
+                  },
+                  {
+                    "title": "Install-Abfrage",
+                    "slug": "install-abfrage"
+                  },
+                  {
+                    "title": "Uninstall-Abfrage",
+                    "slug": "uninstall-abfrage"
+                  },
+                  {
+                    "title": "Funktionsblock",
+                    "slug": "funktionsblock"
+                  },
+                  {
+                    "title": "Andere Funktionen",
+                    "slug": "andere-funktionen"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Setup.inf EXE",
+                "file": "Projekts/Matrix42 Empirum/Paketierung/04_SetupEXE.md",
+                "slug": "setupinf-exe",
+                "children": [
+                  {
+                    "title": "Install Shield",
+                    "slug": "install-shield"
+                  },
+                  {
+                    "title": "Aufzeichnen",
+                    "slug": "aufzeichnen"
+                  },
+                  {
+                    "title": "Install",
+                    "slug": "install"
+                  },
+                  {
+                    "title": "Repair",
+                    "slug": "repair"
+                  },
+                  {
+                    "title": "Uninstall",
+                    "slug": "uninstall"
+                  },
+                  {
+                    "title": "Installieren",
+                    "slug": "installieren"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "PowerShell",
+                "file": "Projekts/Matrix42 Empirum/Paketierung/05_PowerShell.md",
+                "slug": "powershell",
+                "children": [
+                  {
+                    "title": "PowerShell-Grundlagen",
+                    "slug": "powershell-grundlagen"
+                  },
+                  {
+                    "title": "PowerShell-Befehle ausführen",
+                    "slug": "powershell-befehle-ausfuehren"
+                  },
+                  {
+                    "title": "Abfrage mit Rückgabewerten",
+                    "slug": "abfrage-mit-rueckgabewerten"
+                  },
+                  {
+                    "title": "Beispiel Cisco",
+                    "slug": "beispiel-cisco"
+                  },
+                  {
+                    "title": "Skript ausführen",
+                    "slug": "skript-ausfuehren"
+                  },
+                  {
+                    "title": "Voraussetzung im Skript",
+                    "slug": "voraussetzung-im-skript"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Andere Setup.inf Befehle",
+                "file": "Projekts/Matrix42 Empirum/Paketierung/06_OtherCommands.md",
+                "slug": "andere-setupinf-befehle",
+                "children": [
+                  {
+                    "title": "Aufgabenplanung",
+                    "slug": "aufgabenplanung"
+                  },
+                  {
+                    "title": "Beenden / Deaktivieren",
+                    "slug": "beenden-/-deaktivieren"
+                  },
+                  {
+                    "title": "ErrorLog erstellen",
+                    "slug": "errorlog-erstellen"
+                  },
+                  {
+                    "title": "Debug-Popup",
+                    "slug": "debug-popup"
+                  },
+                  {
+                    "title": "Funktion hinzufügen",
+                    "slug": "funktion-hinzufuegen"
+                  },
+                  {
+                    "title": "Für ein Install-Popup",
+                    "slug": "fuer-ein-install-popup"
+                  },
+                  {
+                    "title": "Für ein Uninstall-Popup",
+                    "slug": "fuer-ein-uninstall-popup"
+                  },
+                  {
+                    "title": "Registry",
+                    "slug": "registry"
+                  },
+                  {
+                    "title": "1) Registry-Werte direkt in Variable speichern",
+                    "slug": "1-registry-werte-direkt-in-variable-speichern"
+                  },
+                  {
+                    "title": "String verschlüsseln",
+                    "slug": "string-verschluesseln"
+                  },
+                  {
+                    "title": "Zwischenspeichern des verschlüsselten Kennworts in der `Setup.inf`",
+                    "slug": "zwischenspeichern-des-verschluesselten-kennworts-in-der-setupinf"
+                  },
+                  {
+                    "title": "Beispiel Serial",
+                    "slug": "beispiel-serial"
+                  }
+                ],
+                "type": 1
+              }
+            ],
+            "type": 2
+          },
+          {
+            "title": "PXEImage",
+            "file": "Projekts/Matrix42 Empirum/PXEImage/index.md",
+            "slug": "pxeimage",
+            "children": [
+              {
+                "title": "VMWare Workstation Installation",
+                "file": "Projekts/Matrix42 Empirum/PXEImage/01_vmware_workstation_installation.md",
+                "slug": "vmware-workstation-installation",
+                "children": [
+                  {
+                    "title": "Virtuelle Maschine erstellen",
+                    "slug": "virtuelle-maschine-erstellen"
+                  },
+                  {
+                    "title": "ISO-Datei einbinden und von CD starten",
+                    "slug": "iso-datei-einbinden-und-von-cd-starten"
+                  },
+                  {
+                    "title": "Setup starten",
+                    "slug": "setup-starten"
+                  },
+                  {
+                    "title": "Windows Enterprise Edition auswählen und installieren",
+                    "slug": "windows-enterprise-edition-auswaehlen-und-installieren"
+                  },
+                  {
+                    "title": "Nach dem ersten Bootvorgang",
+                    "slug": "nach-dem-ersten-bootvorgang"
+                  },
+                  {
+                    "title": "STRG + SHIFT + F3 drücken",
+                    "slug": "strg-shift-f3-druecken"
+                  },
+                  {
+                    "title": "Warten",
+                    "slug": "warten"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Windows Konfiguration",
+                "file": "Projekts/Matrix42 Empirum/PXEImage/02_windows_konfiguration.md",
+                "slug": "windows-konfiguration",
+                "children": [
+                  {
+                    "title": "Windows Updates",
+                    "slug": "windows-updates"
+                  },
+                  {
+                    "title": "Unerwünschte Apps entfernen",
+                    "slug": "unerwuenschte-apps-entfernen"
+                  },
+                  {
+                    "title": "Registry-Key einstellen",
+                    "slug": "registry-key-einstellen"
+                  },
+                  {
+                    "title": "Im Store nach App-Updates suchen",
+                    "slug": "im-store-nach-app-updates-suchen"
+                  },
+                  {
+                    "title": "Software-Installationen",
+                    "slug": "software-installationen"
+                  },
+                  {
+                    "title": "Windows aufbereiten",
+                    "slug": "windows-aufbereiten"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Windows verallgemeinern (Sysprep beenden)",
+                "file": "Projekts/Matrix42 Empirum/PXEImage/03_windows_verallgemeinern_sysprep_beenden.md",
+                "slug": "windows-verallgemeinern-sysprep-beenden",
+                "children": {
+                  "title": "Sysprep Fehler beheben",
+                  "slug": "sysprep-fehler-beheben"
+                },
+                "type": 1
+              },
+              {
+                "title": "WIM",
+                "file": "Projekts/Matrix42 Empirum/PXEImage/05_wim_erstellen.md",
+                "slug": "wim",
+                "children": [
+                  {
+                    "title": "WIM erstellen",
+                    "slug": "wim-erstellen"
+                  },
+                  {
+                    "title": "Client vorbereiten",
+                    "slug": "client-vorbereiten"
+                  },
+                  {
+                    "title": "WIM aufbereiten",
+                    "slug": "wim-aufbereiten"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "ISO",
+                "file": "Projekts/Matrix42 Empirum/PXEImage/06_iso_erstellen.md",
+                "slug": "iso",
+                "children": null,
+                "type": 1
+              },
+              {
+                "title": "Empirum",
+                "file": "Projekts/Matrix42 Empirum/PXEImage/07_empirum.md",
+                "slug": "empirum",
+                "children": [
+                  {
+                    "title": "Produkt Keys",
+                    "slug": "produkt-keys"
+                  },
+                  {
+                    "title": "Import",
+                    "slug": "import"
+                  }
+                ],
+                "type": 1
+              }
+            ],
+            "type": 2
+          },
+          {
+            "title": "Software Pakete",
+            "file": "Projekts/Matrix42 Empirum/Software Pakete/index.md",
+            "slug": "software-pakete",
+            "children": [
+              {
+                "title": "Pakete Download Links",
+                "file": "Projekts/Matrix42 Empirum/Software Pakete/01_Downloads.md",
+                "slug": "pakete-download-links",
+                "children": [
+                  {
+                    "title": "[Adobe] Acrobat Reader und Pro",
+                    "slug": "adobe-acrobat-reader-und-pro"
+                  },
+                  {
+                    "title": "[Canneverbe Limited] CDBurnerXP",
+                    "slug": "canneverbe-limited-cdburnerxp"
+                  },
+                  {
+                    "title": "[Citrix] Citrix Workspace app",
+                    "slug": "citrix-citrix-workspace-app"
+                  },
+                  {
+                    "title": "[Dell] Command Update",
+                    "slug": "dell-command-update"
+                  },
+                  {
+                    "title": "[Google] Chrome",
+                    "slug": "google-chrome"
+                  },
+                  {
+                    "title": "[GPG4Win] GPG4Win",
+                    "slug": "gpg4win-gpg4win"
+                  },
+                  {
+                    "title": "[DATEV] Sicherheitspaket",
+                    "slug": "datev-sicherheitspaket"
+                  },
+                  {
+                    "title": "[Skymatic GmbH] Cryptomator",
+                    "slug": "skymatic-gmbh-cryptomator"
+                  },
+                  {
+                    "title": "Doxygen",
+                    "slug": "doxygen"
+                  },
+                  {
+                    "title": "Fast Image Map",
+                    "slug": "fast-image-map"
+                  },
+                  {
+                    "title": "[Mozilla] Firefox - Current Version ESR",
+                    "slug": "mozilla-firefox---current-version-esr"
+                  },
+                  {
+                    "title": "FreeCommander",
+                    "slug": "freecommander"
+                  },
+                  {
+                    "title": "Greenshot",
+                    "slug": "greenshot"
+                  },
+                  {
+                    "title": "[Irfan Skiljan] IrfanView",
+                    "slug": "irfan-skiljan-irfanview"
+                  },
+                  {
+                    "title": "[Dominik Reichl] KeePass",
+                    "slug": "dominik-reichl-keepass"
+                  },
+                  {
+                    "title": "[donho] Notepad++",
+                    "slug": "donho-notepad"
+                  },
+                  {
+                    "title": "[BellSoft] OpenJDK Builds",
+                    "slug": "bellsoft-openjdk-builds"
+                  },
+                  {
+                    "title": "OpenSSL",
+                    "slug": "openssl"
+                  },
+                  {
+                    "title": "Oracle Client",
+                    "slug": "oracle-client"
+                  },
+                  {
+                    "title": "[dotPDN LLC] Paint.NET",
+                    "slug": "dotpdn-llc-paintnet"
+                  },
+                  {
+                    "title": "[pdf24.org] PDF24 Creator",
+                    "slug": "pdf24org-pdf24-creator"
+                  },
+                  {
+                    "title": "Prezi Desktop",
+                    "slug": "prezi-desktop"
+                  },
+                  {
+                    "title": "ProjectLibre",
+                    "slug": "projectlibre"
+                  },
+                  {
+                    "title": "[Simon Tatham] PuTTY",
+                    "slug": "simon-tatham-putty"
+                  },
+                  {
+                    "title": "Sciebo",
+                    "slug": "sciebo"
+                  },
+                  {
+                    "title": "Skype",
+                    "slug": "skype"
+                  },
+                  {
+                    "title": "Tipp 10",
+                    "slug": "tipp-10"
+                  },
+                  {
+                    "title": "[VideoLAN] VLC Media Player",
+                    "slug": "videolan-vlc-media-player"
+                  },
+                  {
+                    "title": "WinMerge",
+                    "slug": "winmerge"
+                  },
+                  {
+                    "title": "[Martin Prikryl] WinSCP",
+                    "slug": "martin-prikryl-winscp"
+                  },
+                  {
+                    "title": "[XMind Ltd.] XMind",
+                    "slug": "xmind-ltd-xmind"
+                  },
+                  {
+                    "title": "[Gougelet Pierre_e] XnView",
+                    "slug": "gougelet-pierree-xnview"
+                  },
+                  {
+                    "title": "[Igor Pavlov] 7-ZIP",
+                    "slug": "igor-pavlov-7-zip"
+                  },
+                  {
+                    "title": "[Microsoft] PowerShell 7",
+                    "slug": "microsoft-powershell-7"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "AutoDesk",
+                "file": "Projekts/Matrix42 Empirum/Software Pakete/p_AutoDesk.md",
+                "slug": "autodesk",
+                "children": [
+                  {
+                    "title": "Versionsnummer",
+                    "slug": "versionsnummer"
+                  },
+                  {
+                    "title": "Paket",
+                    "slug": "paket"
+                  },
+                  {
+                    "title": "Paket bauen",
+                    "slug": "paket-bauen"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Mensch und Machine eXs",
+                "file": "Projekts/Matrix42 Empirum/Software Pakete/p_eXs.md",
+                "slug": "mensch-und-machine-exs",
+                "children": [
+                  {
+                    "title": "Dateien zusammenstellen",
+                    "slug": "dateien-zusammenstellen"
+                  },
+                  {
+                    "title": "Struktur am Beispiel von eXs 2024.2",
+                    "slug": "struktur-am-beispiel-von-exs-20242"
+                  },
+                  {
+                    "title": "Deployment-Dateien erstellen/anpassen",
+                    "slug": "deployment-dateien-erstellen/anpassen"
+                  },
+                  {
+                    "title": "`eXsDeploy.cmd`",
+                    "slug": "exsdeploycmd"
+                  },
+                  {
+                    "title": "`eXsDeploy.ini`",
+                    "slug": "exsdeployini"
+                  },
+                  {
+                    "title": "`eXsUninstall.cmd`",
+                    "slug": "exsuninstallcmd"
+                  },
+                  {
+                    "title": "`Startup.xml`",
+                    "slug": "startupxml"
+                  },
+                  {
+                    "title": "`InstallShield.log`",
+                    "slug": "installshieldlog"
+                  },
+                  {
+                    "title": "`LicenceServerList.xml`",
+                    "slug": "licenceserverlistxml"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "NetIQ AAF Client",
+                "file": "Projekts/Matrix42 Empirum/Software Pakete/p_NetIQAAF.md",
+                "slug": "netiq-aaf-client",
+                "children": [
+                  {
+                    "title": "1. Device Service",
+                    "slug": "1-device-service"
+                  },
+                  {
+                    "title": "2. Windows Client",
+                    "slug": "2-windows-client"
+                  },
+                  {
+                    "title": "`config.properties`",
+                    "slug": "configproperties"
+                  },
+                  {
+                    "title": "3. Windows Client Config",
+                    "slug": "3-windows-client-config"
+                  },
+                  {
+                    "title": "PowerShell-Skript",
+                    "slug": "powershell-skript"
+                  },
+                  {
+                    "title": "Sprachanpassung",
+                    "slug": "sprachanpassung"
+                  },
+                  {
+                    "title": "Dateiendungen",
+                    "slug": "dateiendungen"
+                  },
+                  {
+                    "title": "Benötigte Tools",
+                    "slug": "benoetigte-tools"
+                  },
+                  {
+                    "title": "Konvertieren der (DE) Mo-Datei",
+                    "slug": "konvertieren-der-de-mo-datei"
+                  },
+                  {
+                    "title": "Anpassen",
+                    "slug": "anpassen"
+                  },
+                  {
+                    "title": "1. `C:\\Program Files\\NetIQ\\Windows Client\\locale\\aucore.pot`",
+                    "slug": "1-c/program-files/netiq/windows-client/locale/aucorepot"
+                  },
+                  {
+                    "title": "2. `C:\\Program Files\\NetIQ\\Windows Client\\locale\\de\\LC_MESSAGES\\aucore.po`",
+                    "slug": "2-c/program-files/netiq/windows-client/locale/de/lcmessages/aucorepo"
+                  },
+                  {
+                    "title": "Paketdateien kopieren",
+                    "slug": "paketdateien-kopieren"
+                  }
+                ],
+                "type": 1
+              },
+              {
+                "title": "Orca AVA",
+                "file": "Projekts/Matrix42 Empirum/Software Pakete/p_orca.md",
+                "slug": "orca-ava",
+                "children": [
+                  {
+                    "title": "Erster Client",
+                    "slug": "erster-client"
+                  },
+                  {
+                    "title": "Installation",
+                    "slug": "installation"
+                  },
+                  {
+                    "title": "Lizenzinformation",
+                    "slug": "lizenzinformation"
+                  },
+                  {
+                    "title": "ORCA AVA 23 EE",
+                    "slug": "orca-ava-23-ee"
+                  },
+                  {
+                    "title": "ORCA AVA 25 EE",
+                    "slug": "orca-ava-25-ee"
+                  },
+                  {
+                    "title": "Datenübernahme",
+                    "slug": "datenuebernahme"
+                  },
+                  {
+                    "title": "Update",
+                    "slug": "update"
+                  },
+                  {
+                    "title": "Orca Software Paket",
+                    "slug": "orca-software-paket"
+                  },
+                  {
+                    "title": "Vorbereitung",
+                    "slug": "vorbereitung"
+                  },
+                  {
+                    "title": "MST erstellen",
+                    "slug": "mst-erstellen"
+                  },
+                  {
+                    "title": "Verteilung",
+                    "slug": "verteilung"
+                  }
+                ],
+                "type": 1
+              }
+            ],
+            "type": 2
+          }
+        ],
+        "type": 2
+      },
+      {
+        "title": "NoSpamProxy",
+        "file": "Projekts/NoSpamProxy/index.md",
+        "slug": "nospamproxy",
+        "children": [
+          {
+            "title": "Installation",
+            "file": "Projekts/NoSpamProxy/_01_Installation.md",
+            "slug": "installation",
+            "children": [
+              {
+                "title": "Download & Offline Setup erstellen",
+                "slug": "download-offline-setup-erstellen"
+              },
+              {
+                "title": "Intranet Rolle (NSPIR)",
+                "slug": "intranet-rolle-nspir"
+              },
+              {
+                "title": "Gateway Server (NSP01, NSP02, etc.)",
+                "slug": "gateway-server-nsp01-nsp02-etc"
+              }
+            ],
+            "type": 1
+          },
+          {
+            "title": "Ersteinrichtung",
+            "file": "Projekts/NoSpamProxy/_02_Ersteinrichtung.md",
+            "slug": "ersteinrichtung",
+            "children": [
+              {
+                "title": "Config Wizard",
+                "slug": "config-wizard"
+              },
+              {
+                "title": "Web Portal Konfiguration",
+                "slug": "web-portal-konfiguration"
+              },
+              {
+                "title": "NSP01",
+                "slug": "nsp01"
+              },
+              {
+                "title": "NSPIR",
+                "slug": "nspir"
+              }
+            ],
+            "type": 1
+          },
+          {
+            "title": "Konfiguration",
+            "file": "Projekts/NoSpamProxy/_03_Konfiguration.md",
+            "slug": "konfiguration",
+            "children": [
+              {
+                "title": "E-Mail Routing Einstellungen",
+                "slug": "e-mail-routing-einstellungen"
+              },
+              {
+                "title": "Corporate EMail servers",
+                "slug": "corporate-email-servers"
+              },
+              {
+                "title": "Inbound Send Connectors",
+                "slug": "inbound-send-connectors"
+              },
+              {
+                "title": "Outbound Send Connectors",
+                "slug": "outbound-send-connectors"
+              },
+              {
+                "title": "Receive Connectors",
+                "slug": "receive-connectors"
+              }
+            ],
+            "type": 1
+          },
+          {
+            "title": "Administration",
+            "file": "Projekts/NoSpamProxy/_04_Administration.md",
+            "slug": "administration",
+            "children": [
+              {
+                "title": "Rollen oder Server neustarten",
+                "slug": "rollen-oder-server-neustarten"
+              },
+              {
+                "title": "Gateway Server hinzufügen",
+                "slug": "gateway-server-hinzufuegen"
+              },
+              {
+                "title": "SMTP User anlegen",
+                "slug": "smtp-user-anlegen"
+              },
+              {
+                "title": "E-Mail-Zertifikate importieren",
+                "slug": "e-mail-zertifikate-importieren"
+              },
+              {
+                "title": "Nutzer / E-Mail-Adresse erstellen",
+                "slug": "nutzer-/-e-mail-adresse-erstellen"
+              },
+              {
+                "title": "Server Zertifikat installieren",
+                "slug": "server-zertifikat-installieren"
+              },
+              {
+                "title": "DNS Server",
+                "slug": "dns-server"
+              }
+            ],
+            "type": 1
+          },
+          {
+            "title": "Bekannte Fehler",
+            "file": "Projekts/NoSpamProxy/_05_BekannteFehler.md",
+            "slug": "bekannte-fehler",
+            "children": {
+              "title": "Receive Connector",
+              "slug": "receive-connector"
+            },
+            "type": 1
+          }
+        ],
+        "type": 2
+      },
+      {
+        "title": "Terminalservices",
+        "file": "Projekts/Terminalservices/index.md",
+        "slug": "terminalservices",
+        "children": [
+          {
+            "title": "IDES",
+            "file": "Projekts/Terminalservices/ides.md",
+            "slug": "ides",
+            "children": [
+              {
+                "title": "Kontakt",
+                "slug": "kontakt"
+              },
+              {
+                "title": "Installieren",
+                "slug": "installieren"
+              },
+              {
+                "title": "Updaten",
+                "slug": "updaten"
+              },
+              {
+                "title": "Migration auf RDS",
+                "slug": "migration-auf-rds"
+              },
+              {
+                "title": "Hinweis",
+                "slug": "hinweis"
+              }
+            ],
+            "type": 1
+          }
+        ],
+        "type": 2
+      },
+      {
+        "title": "VCenter Server",
+        "file": "Projekts/VCenter Server/index.md",
+        "slug": "vcenter-server",
+        "children": [
+          {
+            "title": "Zertifikat tauschen",
+            "file": "Projekts/VCenter Server/CertChange.md",
+            "slug": "zertifikat-tauschen",
+            "children": null,
+            "type": 1
+          }
+        ],
+        "type": 2
+      }
+    ],
+    "type": 2
+  }
+]

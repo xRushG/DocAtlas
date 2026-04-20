@@ -1,0 +1,24 @@
+{
+  "tableOfContents": {
+    "exclude": [],
+    "depth": 2,
+    "autoCreate": true,
+    "name": "index.md"
+  },
+  "logo": {
+    "dark": "assets/logo-dark.png",
+    "light": "assets/logo-light.png",
+    "enabled": true
+  },
+  "styles": {
+    "useCustom": false,
+    "path": "custom/style.css"
+  },
+  "environment": {
+    "navigationFile": "assets/navigation.json",
+    "markdownFolder": "md/"
+  },
+  "navigation": {
+    "depth": 2
+  }
+}

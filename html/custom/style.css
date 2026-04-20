@@ -1,0 +1,205 @@
+/* =========================================================
+   GLOBAL / BASE SETTINGS
+   ========================================================= */
+
+/* Enables smooth anchor scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  font-family: Arial, sans-serif;
+}
+
+/* =========================================================
+   THEME BASE (LIGHT / DARK)
+   Applied via body class
+   ========================================================= */
+
+/* Light theme (default) */
+body.light {
+  background: #f7f4ef;
+  color: #2b2b2b;
+}
+
+/* Dark theme base */
+body.dark {
+  background: #121826;
+  color: #e4e8f0;
+}
+
+/* =========================================================
+   SIDEBAR (THEME OVERRIDES)
+   ========================================================= */
+
+body.dark #sidebar {
+  background: #1b2433;
+  border-right: 1px solid #314056;
+}
+
+/* =========================================================
+   NAVIGATION STATES (DARK MODE OVERRIDES)
+   ========================================================= */
+
+body.dark .nav-item:hover,
+body.dark .nav-group:hover {
+  background: #273246;
+}
+
+body.dark .nav-item.active,
+body.dark .nav-group.active {
+  background: #3a4b67;
+}
+
+/* Dark mode link hover inside content */
+body.dark #content ul li a:hover {
+  background: rgba(120, 170, 255, 0.12);
+}
+
+/* Dark mode nested list border */
+body.dark #content ul ul {
+  border-left: 2px solid rgba(120, 170, 255, 0.18);
+}
+
+/* =========================================================
+   THEME TOGGLE BUTTON
+   ========================================================= */
+
+#themeToggle {
+  position: fixed;
+  bottom: 15px;
+  left: 15px;
+  z-index: 1000;
+
+  width: 42px;
+  height: 42px;
+
+  border-radius: 50%;
+  border: 1px solid #8a8a8a;
+
+  background: #fff6e8;
+  cursor: pointer;
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* =========================================================
+   SIDEBAR LAYOUT
+   ========================================================= */
+
+#sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  width: 300px;
+  height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #efe6d8;
+  border-right: 1px solid #c7b59d;
+
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* Scrollable navigation area */
+#nav {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Logo area inside sidebar */
+#logo {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #c7b59d;
+  margin-bottom: 15px;
+}
+
+#logo img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* =========================================================
+   NAVIGATION ITEMS
+   ========================================================= */
+
+.nav-group {
+  padding: 1px;
+  cursor: pointer;
+}
+
+.nav-item {
+  padding: 10px;
+  cursor: pointer;
+}
+
+/* Hover state (light mode default) */
+.nav-item:hover,
+.nav-group:hover {
+  background: #d7c3a8;
+}
+
+/* Active navigation item */
+.nav-item.active,
+.nav-group.active {
+  background: #b98f5a;
+  font-weight: bold;
+}
+
+/* =========================================================
+   MAIN CONTENT AREA
+   ========================================================= */
+
+#content {
+  margin-left: 310px;
+  padding: 30px;
+}
+
+/* =========================================================
+   LIST STYLING INSIDE CONTENT
+   ========================================================= */
+
+#content ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+#content ul li {
+  margin: 4px 0;
+}
+
+#content ul li a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 6px;
+
+  text-decoration: none;
+  color: inherit;
+
+  transition: background 0.15s ease, padding-left 0.15s ease;
+}
+
+/* Hover effect for links */
+#content ul li a:hover {
+  background: rgba(120, 90, 40, 0.08);
+  padding-left: 14px;
+}
+
+/* Keep visited links visually identical */
+#content ul li a:visited {
+  color: inherit;
+}
+
+/* Nested list indentation */
+#content ul ul {
+  margin-left: 14px;
+  border-left: 2px solid rgba(120, 90, 40, 0.14);
+  padding-left: 10px;
+}
