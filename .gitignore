@@ -1,0 +1,9 @@
+# Markdown content
+/html/md/
+
+# Specific config
+/html/app.json
+
+# Generated assets
+/html/assets/navigation.json
+/html/assets/search-index.json

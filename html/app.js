@@ -1,5 +1,6 @@
 let pages = [];
 let APPCONFIG;
+let miniSearch;
 
 /*
   Global configuration.
@@ -10,7 +11,8 @@ const CONFIG = {
     nav: "nav",
     content: "content",
     logo: "logo",
-    themeToggle: "themeToggle"
+    themeToggle: "themeToggle",
+    searchBox: "searchBox"
   },
 
   theme: {
@@ -143,8 +145,8 @@ async function loadMenu() {
 
   try {
 
-    const res = await fetch(APPCONFIG.environment.navigationFile);
-    if (!res.ok) throw new Error(APPCONFIG.environment.navigationFile + " not found");
+    const res = await fetch(APPCONFIG.environment.navigationIndex);
+    if (!res.ok) throw new Error(APPCONFIG.environment.navigationIndex + " not found");
 
     const data = await res.json();
 
@@ -293,11 +295,62 @@ function addPages(node) {
 
   if (!node.children) return;
 
-  if (!Array.isArray(node.children)) return;
+  //if (!Array.isArray(node.children)) return;
+  if (node.children && !Array.isArray(node.children)) {
+    node.children = [node.children];
+  }
 
   node.children.forEach(child => addPages(child));
 }
 
+/* --------------------------------------------------
+   Search loading
+-------------------------------------------------- */
+async function loadSearch() {
+
+  const res = await fetch(APPCONFIG.environment.searchIndex);
+  const docs = await res.json();
+
+  miniSearch = new MiniSearch({
+    fields: ['title', 'text'],
+    storeFields: ['title', 'slug'],
+    idField: 'slug'
+  });
+
+  miniSearch.addAll(docs);
+
+}
+
+function searchDocs(query) {
+
+  if (!query || query.length < 2) return [];
+
+  return miniSearch.search(query, {
+    prefix: true,
+    fuzzy: 0.2
+  });
+
+}
+
+function renderResults(results) {
+
+  const content = document.getElementById("content");
+
+  let html = "<h1>Search Results</h1>";
+
+  results.forEach(r => {
+
+    html += `
+      <div class="search-result">
+        <a href="#${r.slug}">
+          <strong>${r.title}</strong>
+        </a>
+      </div>
+    `;
+  });
+
+  content.innerHTML = html;
+}
 /* --------------------------------------------------
    Hash routing
 -------------------------------------------------- */
@@ -306,19 +359,25 @@ function handleHashChange() {
   const hash = location.hash.substring(1);
   if (!hash) return;
 
+  let page = findPageBySlug(hash);
+let anchor = null;
+
+if (!page) {
   const parts = hash.split("/");
-  const slug = parts[0];
-  const anchor = parts.slice(1).join("/");
+  let slug = parts.shift();
+  anchor = parts.join("/");
 
-  const page = findPageBySlug(slug);
-  if (!page) return;
+  page = findPageBySlug(slug);
+}
 
-  loadPage(page.file, false, slug).then(() => {
-    if (anchor) {
-      const el = document.getElementById(anchor);
-      if (el) el.scrollIntoView();
-    }
-  });
+if (!page) return;
+
+loadPage(page.file, false, page.slug).then(() => {
+  if (anchor) {
+    const el = document.getElementById(anchor);
+    if (el) el.scrollIntoView();
+  }
+});
 }
 
 window.addEventListener("hashchange", handleHashChange);
@@ -362,6 +421,14 @@ document.getElementById(CONFIG.dom.themeToggle).onclick = () => {
 
 };
 
+document.getElementById(CONFIG.dom.searchBox).addEventListener("input", e => {
+
+  const results = searchDocs(e.target.value);
+
+  renderResults(results);
+
+});
+
 
 /* --------------------------------------------------
    Start application
@@ -369,6 +436,7 @@ document.getElementById(CONFIG.dom.themeToggle).onclick = () => {
 (async () => {
   await loadConfig();
   await loadStyle();
+  await loadSearch();
 
   initUI();
   init();

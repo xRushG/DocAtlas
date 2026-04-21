@@ -177,6 +177,37 @@ function Get-SubTitles {
     return $items
 }
 
+function Get-CleanMarkdownContent($Path) {
+
+    $content = Get-Content $Path -Raw
+
+    # Remove fenced code blocks (multiline)
+    $content = [regex]::Replace($content, '```[\s\S]*?```', '')
+
+    # Remove inline code
+    $content = [regex]::Replace($content, '`[^`]*`', '')
+
+    # Remove images: ![alt](url)
+    $content = [regex]::Replace($content, '!\[.*?\]\(.*?\)', '')
+
+    # Convert links [text](url) -> text
+    $content = [regex]::Replace($content, '\[([^\]]+)\]\([^)]+\)', '$1')
+
+    # Remove headings (#, ##, etc.)
+    $content = [regex]::Replace($content, '^\s*#+\s*', '', 'Multiline')
+
+    # Remove blockquotes
+    $content = [regex]::Replace($content, '^\s*>\s?', '', 'Multiline')
+
+    # Remove emphasis markers (*, _, **)
+    $content = [regex]::Replace($content, '(\*\*|\*|__|_)', '')
+
+    # Optional: remove HTML tags
+    $content = [regex]::Replace($content, '<[^>]+>', '')
+
+    return $content.Trim()
+}
+
 function Get-Slug($text) {
 <#
 .SYNOPSIS
@@ -195,7 +226,7 @@ function Get-Slug($text) {
     $slug = $slug -replace "ß","ss"
 
     $slug = $slug -replace "\\", "/"              # normalize separators first
-    $slug = $slug -replace "[^a-z0-9\s\-/]", ""   # allow /
+    $slug = $slug -replace "[^a-z0-9\s\-]", ""    # allow /
     $slug = $slug -replace "\s+", "-"             # spaces → dash
 
     return $slug.Trim("-")
@@ -280,93 +311,84 @@ function Build-Tree {
         [Parameter(Mandatory)]
         [string]$BasePath,
 
-        [string]$CurrentPath = $BasePath
+        [string]$CurrentPath = $BasePath,
+        [string]$ParentSlug = ""
     )
 
-    $items = @()
+    $invalidChars = "[\(\)\[\]\{\}#?%&]"
 
-    $entries = Get-ChildItem -LiteralPath $CurrentPath | Sort-Object {
-        if ($_.PSIsContainer) { 1 } else { 0 }
-    }, Name
+    $items = New-Object System.Collections.Generic.List[object]
+
+    $entries = Get-ChildItem -LiteralPath $CurrentPath -Force |
+        Sort-Object @{Expression = { -not $_.PSIsContainer }}, Name
 
     foreach ($entry in $entries) {
+
+        $relativePath = [System.IO.Path]::GetRelativePath($BasePath, $entry.FullName) -replace "\\","/"
 
         # -----------------------------
         # DIRECTORY
         # -----------------------------
         if ($entry.PSIsContainer) {
 
-            $invalidChars = "[\(\)\[\]\{\}#?%&]"
             if ($entry.Name -match $invalidChars) {
-        
-                Write-Warning "Folder '$($entry.FullName)' contains special characters that may cause problems in URLs. Consider renaming the folder."
+                Write-Warning "Folder '$($entry.FullName)' contains special characters that may cause problems in URLs."
             }
 
-            $children = Build-Tree -BasePath $BasePath -CurrentPath $entry.FullName
-
-            # Ordner ohne Markdown komplett ignorieren
-            if ($children.Count -eq 0) {
-                continue
-            }
-
-            $relativePath = [System.IO.Path]::GetRelativePath($BasePath, $entry.FullName)
-            $relativePath = $relativePath -replace "\\","/"
-
+            $title = $entry.Name
             $indexFile = Join-Path $entry.FullName "index.md"
 
             if (Test-Path $indexFile) {
-
                 $title = Get-Title $indexFile
-                $slug  = Get-Slug $title
-
-                $items += [PSCustomObject]@{
-                    title    = $title
-                    file     = "$relativePath/index.md"
-                    slug     = $slug
-                    children = @($children)
-                    type     = 3
-                }
-
             }
-            else {
 
-                # virtueller Ordner
-                $title = $entry.Name
-                $slug  = Get-Slug $title
+            $localSlug = Get-Slug $title
+            $slug = if ($ParentSlug) { "$ParentSlug/$localSlug" } else { $localSlug }
 
-                $items += [PSCustomObject]@{
-                    title    = $title
-                    file     = "$relativePath/index.md"
-                    slug     = $slug
-                    children = @($children)
-                    type     = 2
-                }
+            # Rekursion zuerst, damit wir children prüfen können
+            $children = @()
+            $children = Build-Tree -BasePath $BasePath -CurrentPath $entry.FullName -ParentSlug $slug
+
+            # Ordner ohne Inhalt skippen
+            if ($children.Count -eq 0 -and -not (Test-Path $indexFile)) {
+                continue
             }
+
+            $items.Add([PSCustomObject]@{
+                title    = $title
+                file     = "$relativePath/index.md"
+                slug     = $slug
+                children = $children
+                type     = if (Test-Path $indexFile) { 3 } else { 2 }
+            })
+
+            continue
         }
 
         # -----------------------------
         # MARKDOWN FILE
         # -----------------------------
-        elseif ($entry.Extension -eq ".md") {
-
-            if ($entry.Name -eq "index.md") {
-                continue
-            }
-
-            $relativePath = [System.IO.Path]::GetRelativePath($BasePath, $entry.FullName)
-            $relativePath = $relativePath -replace "\\","/"
-
-            $title = Get-Title $entry.FullName
-            $slug  = Get-Slug $title
-
-            $items += [PSCustomObject]@{
-                title    = $title
-                file     = $relativePath
-                slug     = $slug
-                children = Get-SubTitles $entry.FullName
-                type     = 1
-            }
+        if ($entry.Extension -ne ".md" -or $entry.Name -eq "index.md") {
+            continue
         }
+
+        $title = Get-Title $entry.FullName
+
+        $content = Get-CleanMarkdownContent $entry.FullName 
+
+        $localSlug = Get-Slug $title
+        $slug = if ($ParentSlug) { "$ParentSlug/$localSlug" } else { $localSlug }
+        $children = @()
+        $children = Get-SubTitles $entry.FullName
+
+        $items.Add([PSCustomObject]@{
+            title    = $title
+            file     = $relativePath
+            slug     = $slug
+            text     = $content
+            children = $children
+            type     = 1
+        })
     }
 
     return $items
@@ -390,7 +412,7 @@ function Process-Tree {
         $indexFile = Join-Path $folder $buildConf.tableOfContents.name
         if (-not (Test-Path $indexFile) -and $node.type -eq 2) {
             Create-Index -Folder $folder -Children $node.children
-
+            $children = @()
             $children = $node.children | Where-Object { $_.type -ge 2 }
             if ($children.Count -gt 0) {
                 Process-Tree -Nodes $node.children -CurrentPath $folder
@@ -399,6 +421,52 @@ function Process-Tree {
     }
 }
 
+function Strip-Text {
+    param($nodes)
+
+    $result = @()
+
+    foreach ($n in $nodes) {
+
+        $obj = [PSCustomObject]@{
+            title = $n.title
+            file  = $n.file
+            slug  = $n.slug
+            type  = $n.type
+        }
+
+        if ($n.children) {
+            $obj | Add-Member -Name children -Value (Strip-Text $n.children) -MemberType NoteProperty
+        }
+
+        $result += $obj
+    }
+
+    return $result
+}
+
+function Flatten-SearchIndex {
+    param($nodes)
+
+    $result = @()
+
+    foreach ($n in $nodes) {
+
+        if ($n.text) {
+            $result += [PSCustomObject]@{
+                title = $n.title
+                slug  = $n.slug
+                text  = $n.text
+            }
+        }
+
+        if ($n.children) {
+            $result += Flatten-SearchIndex $n.children
+        }
+    }
+
+    return $result
+}
 
 # --------------------------------------------------
 # Prepare build environment
@@ -424,18 +492,23 @@ $src   = Join-Path $scriptRoot "src"
 
 # Destination folder where the generated HTML will be written. Must be located inside the root directory
 $build = Join-Path $scriptRoot "html"
-# Application Configruation
-$appConfig = Join-Path $build "app.json"
 
 # Output paths for generated Markdown files and navigation structure
+$outAppConfig = Join-Path $build "app.json"
 $outMd = Join-Path $build $buildConf.environment.markdownFolder
-$outSidebar = Join-Path $build $buildConf.environment.navigationFile
+$outNavIndex= Join-Path $build $buildConf.environment.navigationIndex
+$outSearchIndex = Join-Path $build $buildConf.environment.searchIndex
 
 
 # Clean up the build directory
 Write-Host "Cleaning up build directory..." -ForegroundColor Cyan
-Remove-Item -Recurse -Force $outMd -ErrorAction Ignore | Out-Null
+Remove-Item $outMd -Recurse -Force -ErrorAction Ignore | Out-Null
+Remove-Item $outAppConfig   -Force -ErrorAction Ignore | Out-Null
+Remove-Item $outNavIndex    -Force -ErrorAction Ignore | Out-Null
+Remove-Item $outSearchIndex -Force -ErrorAction Ignore | Out-Null
+
 New-Item -ItemType Directory -Path $outMd | Out-Null
+
 
 # --------------------------------------------------
 # SCAN SRC and Build Tree Structure
@@ -459,16 +532,26 @@ Process-Tree -Nodes $tree -CurrentPath $outMd
 # WRITE NAVIGATION
 # --------------------------------------------------
 Write-Host "Writing navigation structure to JSON..." -ForegroundColor Cyan
-$tree |
+$nav = ,@(Strip-Text $tree)
+$nav |
     ConvertTo-Json -Depth 20 |
-    Set-Content $outSidebar -Encoding UTF8
+    Set-Content $outNavIndex -Encoding UTF8
+
+# --------------------------------------------------
+# WRITE Search-Index
+# --------------------------------------------------
+$searchIndex = ,@(Flatten-SearchIndex $tree)
+
+$searchIndex |
+    ConvertTo-Json -Depth 5 |
+    Set-Content $outSearchIndex -Encoding UTF8
 
 # --------------------------------------------------
 # WRITE APPLICATION CONFIGURATION
 # --------------------------------------------------
 Write-Host "Writing application configuration to JSON..." -ForegroundColor Cyan
 ($buildConf | ConvertTo-Json -Depth 5) -replace "\\\\","/" | 
-    Set-Content $appConfig -Encoding UTF8 
+    Set-Content $outAppConfig -Encoding UTF8 
  
 # --------------------------------------------------
 # Build complete

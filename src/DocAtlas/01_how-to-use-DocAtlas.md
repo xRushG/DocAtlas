@@ -1,231 +1,233 @@
 # How to Use DocAtlas
 
-This document describes how to use DocAtlas:
+This document explains how to use **DocAtlas**, including the build process, configuration files, search functionality, syntax highlighting, and helper update scripts.
 
-1. Build the documentation (`build.ps1`)
-2. Update Marked.js (`updateMarked.ps1`)
-3. Start the local HTTP server (`startServer.ps1`)
+DocAtlas is a lightweight static documentation tool that builds a documentation website from Markdown files.
+
+Main features:
+
+- Markdown‑based documentation
+- Automatic navigation generation
+- Full‑text search
+- Client‑side syntax highlighting
+- Copy buttons for code blocks
+- Local development server
+- Static output (no backend required)
 
 ---
 
-## 1. Generate Markdown Export & Search Index (`build.ps1`)
+# Project Structure
 
-This script processes Markdown files from the `src` directory, copies them into the `docs` directory, and generates a JSON‑based search index.
+A typical DocAtlas project looks like this:
 
-### Parameters
-
-- **Root**: Project root directory  
-- **Depth**: JSON serialization depth for the search index
-
-### Default Values
-
-If no parameters are provided:
-
-- **Root:** `$PSScriptRoot`
-- **Depth:** `4`
-
-### Paths
-
-- **Source directory:** `src`
-- **Target directory (Markdown):** `docs\md`
-- **Search index file:** `docs\search.json`
-
-### Process
-
-- Sets default values for `Root` and `Depth` if not specified
-- Defines source and destination paths
-- Deletes the existing `docs\md` directory (if it exists)
-- Creates a new target directory
-- Iterates through all `.md` files in the `src` directory:
-  - Copies each file to `docs\md`
-  - Extracts the title from the first Markdown heading (`# ...`)
-  - Fallback: file name without extension
-  - Adds an entry to the search index:
-    - `title`
-    - `file`
-- Serializes the search index as JSON
-- Saves it as `docs\search.json`
-
-### Purpose
-
-Automatically prepares a static documentation structure including:
-
-- exported Markdown files
-- an easy‑to‑use JSON search index for frontend search or navigation
-
-### Execution
-
-From the project root (where `build.ps1` is located):
-
-```powershell
-.\build.ps1
+```
+project-root/
+│
+├─ src/                        # Markdown documentation source
+│
+├─ html/                    
+│   ├─ md/					   # SRC documentation sites and generated index files
+│   ├─ assets/
+│   │   ├─ navigation.json	   # generated navigation
+│   │   ├─ search-index.json   # generated search index
+│   │   └─ other files         # LOGOs...
+│   ├─ lib/
+│   ├─ app.js				   # javascript code
+│   ├─ app.json 			   # Runtime configuration for the frontend
+│   └─ index.html
+│
+├─ tools/                      # Helper scripts for library updates
+│   ├─ updateHighlight-css.ps1
+│   ├─ updateHighlight-js.ps1
+│   ├─ updateMarked-js.ps1
+│   └─ updateMiniSearch-js.ps1
+│
+├─ build.ps1                   # Documentation build script
+├─ build.ini                   # Build configuration -> is building ports for app.json
+├─ startServer.ps1			   # local PowerShell 7 web service helper
 ```
 
-After running the script you should have:
+---
 
-- `docs/md/...` → the copied Markdown files
-- `docs/search.json` → JSON index used by the menu in `app.js`
+# 1. Configuration
 
-**Tip:** Run `build.ps1` after every change in `src/*.md` so the updates are reflected in `docs`.
+DocAtlas uses two configuration files:
+
+## build.ini
+
+`build.ini` defines build‑time settings used by the PowerShell build script.
+
+Typical configuration includes:
+
+- markdown source directory
+- output directory
+- navigation generation settings
+- search index settings
+- table of contents options
+
+The build script reads this file when generating the documentation site.
 
 ---
 
-## 2. Update Marked.js (`updateMarked.ps1`)
+## app.json
 
-This script downloads the latest (or a specified) version of `marked.min.js` and stores it in the project.
+`app.json` contains configuration used by the frontend application.
 
-### Parameters
+Typical settings include:
 
-- **TargetDir**: Target directory for the file  
-- **MarkedURL**: Download source (default: jsDelivr CDN)
+- navigation file location
+- search index file location
+- markdown folder path
+- theme settings
+- logo configuration
+- custom stylesheet support
 
-### Default Values
+Example responsibilities:
 
-If no parameters are provided:
+```
+environment paths
+navigation settings
+search index location
+UI options
+```
 
-- **Target directory:** `docs\lib` (relative to the script directory)
-- **Source:** `https://cdn.jsdelivr.net/npm/marked/marked.min.js`
+---
 
-### Process
+# 2. Build the Documentation (`build.ps1`)
 
-- Checks if the target directory exists and creates it if necessary
-- Downloads the file using `Invoke-WebRequest`
-- Saves the file as `marked.min.js`
-- Outputs the full destination path as a status message
+The build script scans the Markdown files inside the `src` directory and generates the static documentation site.
 
-### Purpose
-
-Allows easy updating of a local Marked.js version for web or documentation projects without manually integrating a CDN.
-
-### Default Usage
+### Run the build
 
 From the project root:
 
 ```powershell
-tools\updateMarked.ps1
-```
-
-- Target directory (default): `docs\lib`
-- URL (default):  
-  `https://cdn.jsdelivr.net/npm/marked/marked.min.js`
-
-Result:
-
-```
-docs\lib\marked.min.js
-```
-
-is created or overwritten.
-
-### Using a Specific Version
-
-Example: download a specific version of Marked:
-
-```powershell
-tools\updateMarked.ps1 -MarkedURL "https://cdn.jsdelivr.net/npm/marked@11.2.0/marked.min.js"
-```
-
-### Using a Different Target Directory
-
-```powershell
-.\updateMarked.ps1 -TargetDir "C:\temp\marked-test"
-```
-
-This will create:
-
-```
-C:\temp\marked-test\marked.min.js
-```
-
----
-
-## 3. Start the Local HTTP Server (`startServer.ps1`)
-
-The HTTP server allows you to test the documentation locally in a browser without issues related to `file://` and `fetch()`.
-
-### Parameters
-
-- **DocsRoot** → Directory that will be served (typically `docs`)
-- **Port** → Port number (e.g. `8080`)
-
-### Default Values
-
-If no parameters are provided:
-
-- **DocsRoot:** `docs` (relative to the script directory)
-- **Port:** `8080`
-
-### How It Works
-
-- Starts a simple HTTP server using `System.Net.HttpListener`
-- Listens on:
-
-```
-http://localhost:<Port>/
-```
-
-- Serves static files from the specified DocsRoot directory
-
-### Supported MIME Types
-
-Includes support for:
-
-- HTML, CSS, JavaScript
-- JSON
-- Markdown (`.md` served as `text/plain`)
-- Images (PNG, JPG, GIF, SVG)
-
-### Request Handling
-
-- `/` is automatically resolved to `index.html`
-- URL paths are decoded and mapped to the filesystem
-- Protection against path traversal (access outside DocsRoot is blocked)
-
-### Response Behavior
-
-- **200 OK** → File found and served
-- **404 Not Found** → File does not exist
-- **500 Internal Server Error** → Internal error occurred
-
-### Runtime Behavior
-
-- Server runs continuously in a loop
-- Requests are handled synchronously
-- Stop the server with **Ctrl + C**
-
----
-
-## 4. Typical Workflow
-
-1. **Edit Markdown files**
-
-Write or update content in:
-
-```
-src/*.md
-```
-
-2. **Run the build**
-
-```powershell
 .\build.ps1
 ```
 
-3. **(Optional) Update Marked.js**
+### What the build script does
 
-Only required when testing or upgrading to a new version:
+The build process performs the following steps:
 
-```powershell
-.\updateMarked.ps1
+1. Reads configuration from `build.ini`
+2. Scans the `src` directory for Markdown files
+3. Builds a hierarchical documentation tree
+4. Copies Markdown files into the output directory
+5. Generates automatic `index.md` files where needed
+6. Generates the navigation structure
+7. Builds the full‑text search index
+
+### Output
+
+After the build you will have:
+
+```
+html/md/
+html/assets/navigation.json
+html/assets/search-index.json
 ```
 
-4. **Start the HTTP server**
+---
 
-```powershell
-.\docs\startServer.ps1 -Root .\docs -Port 8080
+# 3. Search Functionality
+
+DocAtlas includes a built‑in **client‑side full‑text search** powered by **MiniSearch**.
+
+The search bar is located in the sidebar and searches across:
+
+- page titles
+- Markdown headings
+- documentation content
+
+### Search Index
+
+The search index is generated automatically during the build process:
+
+```
+html/assets/search-index.json
 ```
 
-5. **Open the documentation in a browser**
+The index contains:
+
+```
+title
+slug
+text
+```
+
+Search results link directly to the relevant page.
+
+---
+
+# 4. Syntax Highlighting
+
+DocAtlas uses **Highlight.js** for client‑side syntax highlighting of Markdown code blocks.
+
+Example Markdown:
+
+````markdown
+```powershell
+Get-Service
+```
+````
+
+Supported languages include:
+
+- PowerShell
+- Bash
+- JSON
+- YAML
+- Batch
+- JavaScript
+- HTML
+- CSS
+
+---
+
+# 5. Code Copy Buttons
+
+Every code block automatically receives a **Copy button**.
+
+Features:
+
+- one‑click copy
+- clipboard integration
+- visual feedback ("Copied!")
+
+Example layout:
+
+```
+POWERSHELL                     [Copy]
+
+Get-Service
+```
+
+---
+
+# 6. Local HTTP Server (`startServer.ps1`)
+
+A small PowerShell HTTP server is included for local testing.
+
+This avoids issues caused by opening files directly with:
+
+```
+file://
+```
+
+### Start the server
+
+```powershell
+.\startServer.ps1 -Root .\html -Port 8080
+```
+
+### Default settings
+
+| Parameter | Default |
+|-----------|--------|
+| DocsRoot | html |
+| Port | 8080 |
+
+### Open in browser
 
 ```
 http://localhost:8080
@@ -233,31 +235,157 @@ http://localhost:8080
 
 ---
 
-## 5. Troubleshooting
+# 7. Updating Frontend Libraries
 
-### Browser cannot load `search.json` or `.md`
+DocAtlas includes helper scripts in the **tools** directory to update client‑side libraries.
 
-- Check if the server is running (PowerShell window open, no errors)
-- Verify that `build.ps1` was executed
-- Ensure the following files exist:
-
-```
-docs/md/...
-docs/search.json
-```
-
-### Errors in the browser console (F12)
-
-**`Failed to fetch`**
-
-- Server not reachable
-- Check if the port is correct
-
-**`pages.forEach is not a function`**
-
-- `search.json` does not contain an array
-- Re-run `build.ps1`
+These scripts download the latest versions from the CDN.
 
 ---
 
-With these steps you should be able to operate DocAtlas from an empty project up to a fully running local documentation site.
+## Update Highlight.js CSS
+
+```
+tools/updateHighlight-css.ps1
+```
+
+Downloads the latest Highlight.js stylesheet used for syntax highlighting.
+
+---
+
+## Update Highlight.js JavaScript
+
+```
+tools/updateHighlight-js.ps1
+```
+
+Downloads the Highlight.js runtime library used for syntax highlighting.
+
+---
+
+## Update Marked.js
+
+```
+tools/updateMarked-js.ps1
+```
+
+Updates the **Marked.js** Markdown renderer.
+
+Marked.js converts Markdown into HTML inside the browser.
+
+---
+
+## Update MiniSearch
+
+```
+tools/updateMiniSearch-js.ps1
+```
+
+Updates the **MiniSearch** library used for full‑text search.
+
+---
+
+# 8. Typical Workflow
+
+### 1. Edit documentation
+
+Write or update Markdown files in:
+
+```
+src/
+```
+
+---
+
+### 2. Run the build
+
+```
+.\build.ps1
+```
+
+---
+
+### 3. Start the local server
+
+```
+.\startServer.ps1 -Root .\html -Port 8080
+```
+
+---
+
+### 4. Open the documentation
+
+```
+http://localhost:8080
+```
+
+---
+
+### 5. Test
+
+Verify that the following features work correctly:
+
+- navigation
+- search results
+- syntax highlighting
+- copy buttons for code blocks
+
+---
+
+# 9. Troubleshooting
+
+### Search does not work
+
+Check if the search index exists:
+
+```
+html/assets/search-index.json
+```
+
+Then rebuild the documentation:
+
+```
+.\build.ps1
+```
+
+---
+
+### Navigation does not load
+
+Verify that the navigation index exists:
+
+```
+html/assets/navigation.json
+```
+
+---
+
+### Syntax highlighting missing
+
+Ensure these files exist in the library directory:
+
+```
+highlight.min.js
+highlight.css
+```
+
+---
+
+### Browser console errors
+
+Open the developer tools:
+
+```
+F12
+```
+
+Look for errors such as:
+
+- missing files
+- JSON parsing errors
+- fetch failures
+
+---
+
+Using these steps you can build, preview, and maintain a complete documentation website with **DocAtlas**.
+:::

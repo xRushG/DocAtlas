@@ -2,21 +2,26 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<title>Docs</title>
+		<title>DocAtlas</title>
 		<link rel="stylesheet" href="assets/default.style.css">
 	</head>
 	<body>
 		<div id="sidebar">
 			<div id="logo"></div>
+
+			<div id="searchBoxContainer">
+				<input id="searchBox" type="text" placeholder="Search..." />
+			</div>
+
 			<div id="nav"></div>
 			<button id="themeToggle" title="Theme wechseln">🌓</button>
 		</div>
 		
 		<div id="content">Lade...</div>
-		
-		
+			
 		<!-- lokal -->
 		<script src="lib/marked.min.js"></script>
+		<script src="lib/minisearch.min.js"></script>
 		<script src="app.js"></script>
 	</body>
 </html>

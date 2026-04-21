@@ -40,6 +40,23 @@ body.dark #sidebar {
 }
 
 /* =========================================================
+   SEARCHBAR (DARK MODE OVERRIDES)
+   ========================================================= */
+body.dark #searchBoxContainer {
+  border-bottom: 1px solid #444;
+}
+
+body.dark #searchBox {
+  background: #1e1e1e;
+  border: 1px solid #555;
+  color: #ddd;
+}
+
+body.dark #searchBox::placeholder {
+  color: #888;
+}
+
+/* =========================================================
    NAVIGATION STATES (DARK MODE OVERRIDES)
    ========================================================= */
 
@@ -62,7 +79,18 @@ body.dark #content ul li a:hover {
 body.dark #content ul ul {
   border-left: 2px solid rgba(255, 255, 255, 0.12);
 }
+/* =========================================================
+   THEME TOGGLE BUTTON (DARK MODE OVERRIDES)
+   ========================================================= */
+body.dark #themeToggle {
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #ddd;
+}
 
+body.dark #themeToggle:hover {
+  background: #3a3a3a;
+}
 /* =========================================================
    THEME TOGGLE BUTTON
    ========================================================= */
@@ -84,7 +112,9 @@ body.dark #content ul ul {
 
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
-
+#themeToggle:hover {
+  transform: scale(1.05);
+}
 /* =========================================================
    SIDEBAR LAYOUT
    ========================================================= */
@@ -107,10 +137,16 @@ body.dark #content ul ul {
   box-sizing: border-box;
 }
 
+#searchBoxContainer {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color, #ddd);
+}
+
 /* Scrollable navigation area */
 #nav {
   flex: 1;
   overflow-y: auto;
+  padding: 10px;
 }
 
 /* Logo area inside sidebar */
@@ -118,12 +154,35 @@ body.dark #content ul ul {
   padding: 10px;
   text-align: center;
   border-bottom: 1px solid #ccc;
-  margin-bottom: 15px;
 }
 
 #logo img {
   max-width: 100%;
   height: auto;
+}
+/* =========================================================
+   SEARCHBAR ITEMS
+   ========================================================= */
+
+#searchBox {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #ccc);
+    background: var(--input-bg, #fff);
+    color: var(--text-color, #222);
+    box-sizing: border-box;
+    outline: none;
+}
+
+#searchBox::placeholder {
+    color: #888;
+}
+
+#searchBox:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 2px rgba(74,144,226,0.2);
 }
 
 /* =========================================================
@@ -131,7 +190,7 @@ body.dark #content ul ul {
    ========================================================= */
 
 .nav-group {
-  padding: 1px;
+  padding: 5px;
   cursor: pointer;
 }
 
@@ -203,3 +262,4 @@ body.dark #content ul ul {
   border-left: 2px solid rgba(0, 0, 0, 0.08);
   padding-left: 10px;
 }
+
