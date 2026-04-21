@@ -91,6 +91,25 @@ body.dark #themeToggle {
 body.dark #themeToggle:hover {
   background: #3a3a3a;
 }
+
+/* ================================
+   CODE BLOCKS (DARK MODE OVERRIDES)
+================================ */
+body.dark .code-block pre {
+  background: #2a2a2a;
+  border: 1px solid #444;
+}
+
+body.dark .copy-button {
+  background: #3a3a3a;
+  border: 1px solid #555;
+  color: #ddd;
+}
+
+body.dark .copy-button:hover {
+  background: #555;
+}
+
 /* =========================================================
    THEME TOGGLE BUTTON
    ========================================================= */
@@ -221,6 +240,61 @@ body.dark #themeToggle:hover {
   padding: 30px;
 }
 
+/* ================================
+   CODE BLOCKS
+================================ */
+
+.code-block {
+  position: relative;
+  margin: 16px 0;
+}
+
+.code-block pre {
+  background: #f3f3f3;
+  padding: 14px;
+  border-radius: 6px;
+  overflow-x: auto;
+  border: 1px solid #ddd;
+}
+
+.code-language {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+
+  opacity: 0.7;
+}
+
+.code-block code {
+  font-family: Consolas, monospace;
+  font-size: 13px;
+}
+
+/* Copy button */
+
+.copy-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+
+  font-size: 12px;
+  padding: 4px 8px;
+
+  border-radius: 4px;
+  border: 1px solid #ccc;
+
+  background: white;
+  cursor: pointer;
+}
+
+.copy-button:hover {
+  background: #eee;
+}
+
 /* =========================================================
    LIST STYLING INSIDE CONTENT
    ========================================================= */
@@ -263,3 +337,18 @@ body.dark #themeToggle:hover {
   padding-left: 10px;
 }
 
+
+/* =========================================================
+   STYLE FIXES FOR HIGHLIGHT.JS (DARK MODE OVERRIDES)
+     If using highlight.js, these ensure good contrast in both themes 
+   ========================================================= */
+.hljs {
+  background: #f3f3f3;
+  color: #222;
+}
+
+/* Dark mode */
+body.dark .hljs {
+  background: #2a2a2a;
+  color: #ddd;
+}

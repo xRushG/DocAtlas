@@ -261,7 +261,81 @@ async function loadPage(file, push = true, slug = null) {
 
     document.getElementById(CONFIG.dom.content).innerHTML =
       marked.parse(fixedMd, { renderer });
-          //console.log("Current SLUG: " + slug + " HASH: " + location.hash.substring(1));
+
+    /*document.querySelectorAll("#content pre code").forEach((block) => {
+      // Syntax Highlight
+      hljs.highlightElement(block);
+
+      const pre = block.parentElement;
+
+      // Wrapper erstellen
+      const wrapper = document.createElement("div");
+      wrapper.className = "code-block";
+
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
+
+      // Copy Button
+      const button = document.createElement("button");
+      button.className = "copy-button";
+      button.textContent = "Copy";
+
+      button.onclick = () => {
+
+        navigator.clipboard.writeText(block.innerText);
+
+        button.textContent = "Copied!";
+        setTimeout(() => {
+          button.textContent = "Copy";
+        }, 1500);
+      };
+
+      wrapper.appendChild(button);
+
+    });*/
+    document.querySelectorAll("#content pre code").forEach((block) => {
+
+      hljs.highlightElement(block);
+
+      const pre = block.parentElement;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "code-block";
+
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
+
+      // Sprache ermitteln
+      let language = "text";
+
+      block.classList.forEach(cls => {
+        if (cls.startsWith("language-")) {
+          language = cls.replace("language-", "");
+        }
+      });
+
+      // Language Label
+      const label = document.createElement("div");
+      label.className = "code-language";
+      label.textContent = language;
+
+      wrapper.appendChild(label);
+
+      // Copy Button
+      const button = document.createElement("button");
+      button.className = "copy-button";
+      button.textContent = "Copy";
+
+      button.onclick = () => {
+        navigator.clipboard.writeText(block.innerText);
+
+        button.textContent = "Copied!";
+        setTimeout(() => button.textContent = "Copy", 1500);
+      };
+
+      wrapper.appendChild(button);
+
+    });
 
     if (push && slug && location.hash.substring(1) !== slug) {
       location.hash = slug;
@@ -381,6 +455,10 @@ loadPage(page.file, false, page.slug).then(() => {
 }
 
 window.addEventListener("hashchange", handleHashChange);
+
+/* --------------------------------------------------
+   Higlighting
+-------------------------------------------------- */
 
 
 /* --------------------------------------------------
