@@ -2,6 +2,20 @@ param (
     [string] $ini
 )
 
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+
+    Add-Type -AssemblyName PresentationFramework
+
+    [System.Windows.MessageBox]::Show(
+        "This script requires PowerShell 7 (pwsh).`nPlease run it in a PowerShell 7 session.",
+        "Error",
+        'OK',
+        'Error'
+    ) | Out-Null
+
+    exit 1
+}
+
 #--------------------------------------------------
 #  INI file preperation
 #--------------------------------------------------
@@ -460,8 +474,24 @@ function Flatten-SearchIndex {
             }
         }
 
+        # Unterüberschriften (H2/H3)
         if ($n.children) {
-            $result += Flatten-SearchIndex $n.children
+
+            foreach ($c in $n.children) {
+
+                if ($c.slug) {
+                    $result += [PSCustomObject]@{
+                        title = $c.title
+                        slug  = "$($n.slug)/$($c.slug)"
+                        text  = $c.title
+                    }
+                }
+
+                # falls deeper nesting existiert
+                if ($c.children) {
+                    $result += Flatten-SearchIndex $c.children
+                }
+            }
         }
     }
 
