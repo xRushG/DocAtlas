@@ -127,7 +127,7 @@ function Prepare-DebugConfig{
     )
 
     $config.debug | Add-Member -Name outPath -Value (Join-Path $SCRIPT_ROOT "debug") -MemberType NoteProperty
-    $config.debug | Add-Member -Name tree -Value "debug_tree.json" -MemberType NoteProperty
+    $config.debug | Add-Member -Name tree_default -Value "debug_tree.json" -MemberType NoteProperty
     $config.debug | Add-Member -Name navigation -Value "debug_nav.json" -MemberType NoteProperty
     $config.debug | Add-Member -Name globalSearchIndex -Value "debug_gsi.json" -MemberType NoteProperty
     $config.debug | Add-Member -Name searchIndexSufix -Value "debug_si_{0}.json" -MemberType NoteProperty
@@ -185,98 +185,6 @@ function Get-Title {
     return [System.IO.Path]::GetFileNameWithoutExtension($file)
 }
 
-function Get-SubTitles {
-<#
-.SYNOPSIS
-    Extracts subtitles (H2-H6) from a Markdown file and generates slugs for them.
-.DESCRIPTION
-    The function reads the content of the specified Markdown file, identifies lines that represent subtitles (starting
-#>
-
-    param (
-        [Parameter(Mandatory, Position = 0)]
-        [string]$File,
-
-        [Parameter(Mandatory, Position = 1)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Slug
-    )
-
-    $items = @()
-    $anchorCounts = @{}
-    $lines = Get-Content $File
-
-    $currentTitle = $null
-    $currentLevel = $null
-    $buffer       = New-Object System.Text.StringBuilder
-
-    $inCodeBlock = $false
-
-    function Flush-Section {
-        param (
-            [string] $ct,
-            [string] $sl,
-            [int] $cl,
-            [string] $t
-        )
-
-        $baseAnchor = Get-Slug $ct
-
-        if ($anchorCounts.ContainsKey($baseAnchor)) {
-            $anchorCounts[$baseAnchor]++
-            $anchor = "$baseAnchor-$($anchorCounts[$baseAnchor])"
-        }
-        else {
-            $anchorCounts[$baseAnchor] = 1
-            $anchor = $baseAnchor
-        }
-
-        return [PSCustomObject]@{
-            title  = $ct
-            slug   = $sl
-            anchor = $anchor
-            level  = $cl
-            text   = Get-CleanMarkdownContent -content $t.trim()
-        }
-    }
-
-    foreach ($line in $lines) {
-
-        # Codeblock toogle
-        if ($line -match '^\s*```') {
-            $inCodeBlock = -not $inCodeBlock
-        }
-
-        # Headline detection (H2-H6)
-        if (-not $inCodeBlock -and $line -match '^(#{2,6})\s+(.+)$') {
-            $level = $matches[1].Length
-            $title = $matches[2].Trim()
-
-            # Save current section before starting a new one
-            if ($currentTitle -and $level -le $currentLevel) {
-                $items += Flush-Section -ct $currentTitle -sl $Slug -cl $currentLevel -t $buffer.ToString()
-                $buffer.Clear() | Out-Null
-            }
-
-            $currentTitle = $title
-            $currentLevel = $level
-
-            continue
-        }
-
-        # Content buffering for the current section
-        if ($currentTitle) {
-            [void]$buffer.AppendLine($line)
-        }
-    }
-
-    # save last section
-    if (-not $currentTitle) { continue }
-    $items += Flush-Section -ct $currentTitle -sl $Slug -cl $currentLevel -t $buffer.ToString()
-    $buffer.Clear() | Out-Null
-
-    return $items
-}
 
 function Get-CleanMarkdownContent {
     param (
@@ -383,12 +291,13 @@ function Create-Index {
 #>
     param(
         [string]$Folder,
-        [array]$Children
+        [array]$Children,
+        [string] $Name
     )
 
-    $index = Join-Path $Folder $buildConf.tableOfContents.name
+    #$file = Join-Path $Folder $buildConf.tableOfContents.name
 
-    if (Test-Path $index) {
+    if (Test-Path $file) {
         return
     }
 
@@ -407,167 +316,238 @@ function Create-Index {
         $toc += "- [$($child.title)](#$($child.slug))"
     }
 
-    $toc | Set-Content $index -Encoding UTF8
+    $toc | Set-Content $file -Encoding UTF8
 }
 
 
 # --------------------------------------------------
 #   Tree building and processing
 # -------------------------------------------------
-function Get-H1Content {
-
-    param (
-        [Parameter(Mandatory)]
-        [string]$Content
-    )
-
-    $lines = $Content -split "`n"
-
-    $inCodeBlock = $false
-    $foundH1 = $false
-
-    $buffer = New-Object System.Text.StringBuilder
-
-    foreach ($line in $lines) {
-
-        # Codeblock toggeln
-        if ($line -match '^\s*```') {
-            $inCodeBlock = -not $inCodeBlock
-        }
-
-        # H1 erkennen
-        if (-not $inCodeBlock -and $line -match '^#\s+(.+)$') {
-            $foundH1 = $true
-
-            # H1 explizit in Content aufnehmen
-            [void]$buffer.AppendLine($line)
-
-            continue
-        }
-
-        # Erste Sub-Headline beendet den Bereich
-        if ($foundH1 -and -not $inCodeBlock -and $line -match '^#{2,6}\s+') {
-            break
-        }
-
-        # Content sammeln
-        if ($foundH1) {
-            [void]$buffer.AppendLine($line)
-        }
-    }
-
-    return $buffer.ToString().Trim()
-}
-
 function Build-Tree {
 
     param(
         [Parameter(Mandatory)]
         [string]$BasePath
     )
-    function Append-Tree {
-        param (
-            [Parameter(Mandatory)]
-            [string]$BasePath,
-            [string]$ParentSlug = ""
-        )
+    $IndexFileName = $buildConf.tableOfContents.name?.Trim() ?? "index.md"
+    $indexFile = Join-Path $BasePath $IndexFileName
 
-        # Invalid url chars
-        $invalidChars = "[\(\)\[\]\{\}#?%&]"
-
-        $items = New-Object System.Collections.Generic.List[object]
-        $entries = Get-ChildItem -LiteralPath $BasePath -Force |
-            Sort-Object @{ Expression = { -not $_.PSIsContainer } }, Name
-
-        foreach ($entry in $entries) {
-            if (-not $entry.PSIsContainer -and $entry.Extension -ne '.md') {
-                continue
-            }
-
-            if ($entry.PSIsContainer) {
-                if ($entry.Name -match $invalidChars) {
-                    Write-Warning "Folder '$($entry.FullName)' contains special characters that may cause problems in URLs."
-                }
-
-                $Content = ''
-                $indexFile = Join-Path $entry.FullName "index.md"
-                if (Test-Path $indexFile) {
-                    $title = Get-Title $indexFile
-
-                    $raw = Get-Content $indexFile -Raw
-                    $content = Get-CleanMarkdownContent -content $raw
-                    if ([string]::IsNullOrWhiteSpace($title.toSTring())) {
-                        $title = $entry.Name
-                        Write-Warning "Index file '$indexFile' missing H1 headline (# Title). This may break the search engine."
-                    }
-                    $localSlug = Get-Slug $title
-                }
-                else {
-                    $title = $entry.Name
-                    $localSlug = Get-Slug $title
-                }
-                
-                $slug = if ($ParentSlug) { "$ParentSlug/$localSlug" } else { $localSlug }
-                $children = Append-Tree -BasePath $entry.FullName -ParentSlug $slug
-
-                if ($children.Count -eq 0 -and -not (Test-Path $indexFile)) {
-                    continue
-                }
-                $items.Add([PSCustomObject]@{
-                    File     = $indexFile
-
-                    Title    = $title
-                    Content  = $Content
-                    Slug     = $slug
-                    Children = $children
-                })    
-            }
-            elseif ($entry.Extension -eq '.md') {
-
-                $raw = Get-Content $entry.FullName -Raw
-                $content = Get-CleanMarkdownContent -content $raw
-
-                $title = Get-Title $entry.FullName
-                $localSlug = Get-Slug $title
-                $slug = if ($ParentSlug) { "$ParentSlug/$localSlug" } else { $localSlug }
-
-                $items.Add([PSCustomObject]@{
-                    File     = $entry.FullName
-
-                    Title    = $title
-                    Content  = $content 
-                    Slug     = $slug
-                    Children = $null
-                })
-            }
-        }
-        return $items
-
-    }
-
-    $indexFile = Join-Path $BasePath "index.md"
+    $global:UsedSlugs = @{}
 
     $title = Split-Path $BasePath -Leaf
-    $content = ""
+    #$FullContent = ""
+    $Content = @()
 
     if (Test-Path $indexFile) {
         $raw = Get-Content $indexFile -Raw
-        $content = Get-CleanMarkdownContent -content $raw
+        #$FullContent = Get-CleanMarkdownContent -content $raw
+        $Content = Split-MarkdownSections -Markdown $raw -Slug ""
         $title = Get-Title $indexFile
     }
 
     $children = Append-Tree -BasePath $BasePath -ParentSlug ""
 
     return [PSCustomObject]@{
-        File     = $indexFile
-        Title    = $title
-        Content  = $content
+        File         = $indexFile
+
+        Title        = $title
+        #$FullContent = $FullContent
+        Content  = $Content
+
         Slug     = ""
         Children = $children
     }
 }
 
-function Process-Tree {
+function Append-Tree {
+    param (
+        [Parameter(Mandatory)]
+        [string]$BasePath,
+        [string]$ParentSlug = ""
+    )
+
+    # Invalid url chars
+    $invalidChars = "[\(\)\[\]\{\}#?%&]"
+    $IndexFileName = $buildConf.tableOfContents.name?.Trim() ?? "index.md"
+
+    $items = New-Object System.Collections.Generic.List[object]
+    $entries = Get-ChildItem -LiteralPath $BasePath -Force |
+        Sort-Object @{ Expression = { -not $_.PSIsContainer } }, Name
+
+    foreach ($entry in $entries) {
+        if (-not $entry.PSIsContainer -and $entry.Extension -ne '.md') {
+            continue
+        }
+
+        if ($entry.PSIsContainer) {
+            if ($entry.Name -match $invalidChars) {
+                Write-Warning "Folder '$($entry.FullName)' contains special characters that may cause problems in URLs."
+            }
+
+            #$FullContent = ''
+            $Content = @()
+
+            $indexFileName = $buildConf.tableOfContents.name?.Trim() ?? "index.md"
+            $indexFile = Join-Path $entry.FullName $indexFileName
+
+            if (Test-Path $indexFile) {
+                $title = Get-Title $indexFile
+
+                $raw = Get-Content $indexFile -Raw
+                #$FullContent = Get-CleanMarkdownContent -content $raw
+                $Content = Split-MarkdownSections -Markdown $raw -Slug $slug
+
+                if ([string]::IsNullOrWhiteSpace($title.toSTring())) {
+                    $title = $entry.Name
+                }
+                $localSlug = Get-Slug $title
+            }
+            else {
+                $title = $entry.Name
+                $localSlug = Get-Slug $title
+            }
+            
+            $slug = if ($ParentSlug) { "$ParentSlug/$localSlug" } else { $localSlug }
+            if ($global:UsedSlugs.ContainsKey($slug)) {
+                Write-Error "Duplicate slug detected: '$slug' (File/Folder: $($entry.FullName))"
+                Read-Host -Prompt "Press Enter to continue"
+                exit
+            }
+
+            $children = Append-Tree -BasePath $entry.FullName -ParentSlug $slug
+
+            if ($children.Count -eq 0 -and -not (Test-Path $indexFile)) {
+                continue
+            }
+            
+            $items.Add([PSCustomObject]@{
+                IndexFile = $indexFile
+
+                Title    = $title
+                #FullContent  = $FullContent
+                Content = $Content
+                Slug     = $slug
+                Children = $children
+            })    
+        }
+        elseif ($entry.Extension -eq '.md') {
+
+            $raw = Get-Content $entry.FullName -Raw
+
+            $title = Get-Title $entry.FullName
+
+            $localSlug = Get-Slug $title
+            $slug = if ($ParentSlug) { "$ParentSlug/$localSlug" } else { $localSlug }
+            if ($global:UsedSlugs.ContainsKey($slug)) {
+                Write-Error "Duplicate slug detected: '$slug' (File/Folder: $($entry.FullName))"
+                Read-Host -Prompt "Press Enter to continue"
+                exit
+            }
+
+            #$FullContent = Get-CleanMarkdownContent -content $raw
+            $Content = Split-MarkdownSections -Markdown $raw -Slug $Slug
+
+            $items.Add([PSCustomObject]@{
+                File     = $entry.FullName
+
+                Title    = $title
+                #FullContent  = $FullContent
+                Content = $Content
+                Slug     = $slug
+            })
+        }
+    }
+    return $items
+
+}
+
+function Get-UniqueAnchor {
+    param(
+        [string]$BaseAnchor,
+        [hashtable]$UsedAnchors
+    )
+
+    if ($UsedAnchors.ContainsKey($BaseAnchor)) {
+        $UsedAnchors[$BaseAnchor]++
+        return "$BaseAnchor-$($UsedAnchors[$BaseAnchor])"
+    }
+    else {
+        $UsedAnchors[$BaseAnchor] = 0
+        return $BaseAnchor
+    }
+}
+
+function Split-MarkdownSections {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Markdown,
+        [Parameter(Mandatory)]
+        $Slug
+    )
+
+    $sections = @()
+    $usedAnchors = @{}
+
+    $currentHeader = $null
+    $currentLevel = $null
+
+    $buffer = New-Object System.Text.StringBuilder
+    $id = 0
+
+    $lines = $Markdown -split "`r?`n"
+
+    foreach ($line in $lines) {
+
+        if ($line -match '^(#{1,6})\s+(.*)') {
+
+            if ($currentHeader) {
+                $baseAnchor = Get-Slug $currentHeader
+ 
+                $anchor = Get-UniqueAnchor -BaseAnchor $baseAnchor -UsedAnchors $usedAnchors
+                $href = if ($id -eq 1) { $Slug } else { "$($Slug)#$($anchor)" }
+
+                $sections += [PSCustomObject]@{
+                    Id      = $id
+                    Level   = $currentLevel
+                    Slug    = $Slug
+                    Anchor  = $anchor
+                    Href    = $href
+                    Headline = $currentHeader
+                    Content  =  Get-CleanMarkdownContent -Content $($buffer.ToString().Trim())
+                }
+                $buffer.Clear() | Out-Null
+            }
+
+            $currentLevel  = $matches[1].Length
+            $currentHeader = $matches[2].Trim()
+            $id++
+        }
+
+        $buffer.AppendLine($line) | Out-Null
+    }
+
+    if ($currentHeader) {
+
+        $baseAnchor = Get-Slug $currentHeader
+
+        $anchor = Get-UniqueAnchor -BaseAnchor $baseAnchor -UsedAnchors $usedAnchors
+        $href = if ($id -eq 1) { $Slug } else { "$($Slug)#$($anchor)" }
+
+        $sections += [PSCustomObject]@{
+            Id       = $id
+            Level    = $currentLevel
+            Slug     = $Slug
+            Anchor   = $anchor
+            Href     = $href
+            Headline = $currentHeader
+            Content  = Get-CleanMarkdownContent -content $($buffer.ToString().Trim())
+        }
+    }
+
+    return $sections
+}
+
+function Build-TableOfContents {
 <# 
 .SYNOPSIS
     Recursively processes a tree structure and creates index files for each directory.
@@ -581,76 +561,159 @@ function Process-Tree {
     )
 
     foreach ($node in $Nodes) {
+        if ($node.Content.Count -gt 0) {
+            continue
+        }
+
+        $IndexFileName = $buildConf.tableOfContents.name?.Trim() ?? "index.md"
         $folder = Join-Path $CurrentPath $node.title
-        $indexFile = Join-Path $folder $buildConf.tableOfContents.name
-        if (-not (Test-Path $indexFile) -and $node.type -eq 2) {
-            Create-Index -Folder $folder -Children $node.children
-            $children = @()
-            $children = $node.children | Where-Object { $_.type -ge 2 }
-            if ($children.Count -gt 0) {
-                Process-Tree -Nodes $node.children -CurrentPath $folder
+        
+        if ($node.Title -eq "src" -and $buildConf.tableOfContents.RootToc -eq $false) {
+            continue
+        }
+        elseif ($node.Title -eq "src" -and $buildConf.tableOfContents.RootToc -eq $true) {
+            $folder = Split-Path $folder -Parent
+        }
+        
+        $indexFile = Join-Path $folder $IndexFileName
+
+        if (-not (Test-Path $indexFile)) {
+            If ($ParseConf.debug.enabled) {
+                Write-Host "DEBUG: Creating index file: $indexFile" -ForegroundColor Magenta
             }
+            Get-TOC -Children $node.Children | Set-Content $indexFile -Encoding UTF8
+        }
+
+        if ($node.Children.Count -gt 0) {
+            Build-TableOfContents -Nodes $node.Children -CurrentPath $folder
         }
     }
 }
 
-function Strip-Text {
-    param($nodes)
+function Get-TOC {
+    param (
+        [Parameter(Mandatory)]
+        $Children,
+        $currentLevel = 0
+    )
 
+    $Depth = $buildConf.tableOfContents.depth ?? 2
+
+    $Headlines = @()
+
+    foreach ($child in $Children) {
+        
+
+        if ($child.File -and $child.Content.Count -gt 0) {
+            foreach ($part in $child.Content) {
+
+                $level = ($part.Level) + $currentLevel
+                $Headline = $part.Headline 
+                if ($level -le $Depth) {
+                    $href = $part.Href
+                    $indent = "  " * ($level - 1)
+
+                    If ($ParseConf.debug.enabled) {
+                        Write-Host "DEBUG: Adding headline $("$indent- [$headline]($href)")" -ForegroundColor Gray
+                    }
+
+                    $Headlines += "$indent- [$headline]($slugFragment)"
+                }
+            }
+
+            return $Headlines
+        }
+        
+        $level = $currentLevel + 1
+        $Headline = $child.Title ?? $child.Headline ?? "No Title"
+
+        if ($level -le $Depth) {
+            $indent = "  " * ($level - 1)
+
+            $href = $part.Href
+
+            If ($ParseConf.debug.enabled) {
+                Write-Host "DEBUG: Adding headline $("$indent- [$headline]($href)")" -ForegroundColor Gray
+            }
+
+            $Headlines += "$indent- [$headline]($href)"
+
+            if ($child.Children?.Count -gt 0) {
+                $Headlines += Get-TOC -Children $child.Children -CurrentLevel $level
+            }
+        }
+    }
+    return $Headlines
+}
+
+function Build-Navigation {
+    param(
+        [Parameter(Mandatory)]
+        $nodes,
+        $currentLevel = 0
+    )
+
+    $maxDepth = $buildConf.navigation.depth ?? 2
     $result = @()
 
     foreach ($n in $nodes) {
+        if ($n.content) {
+            foreach ($c in $n.Content) {
+                $level = ($c.Level) + $currentLevel
 
-        $obj = [PSCustomObject]@{
-            title = $n.title
-            file  = $n.file
-            slug  = $n.slug
-            type  = $n.type
+                if ($level -le $maxDepth) {
+                    $result += [PSCustomObject]@{
+                        title = $c.Headline
+                        href  = $c.Href
+                        level = $level
+                    }
+                }
+            }
         }
+        elseif ($n.children) {
 
-        if ($n.children) {
-            $obj | Add-Member -Name children -Value (Strip-Text $n.children) -MemberType NoteProperty
+            $level = $currentLevel + 1
+
+            if ($level -le $maxDepth) {
+                $result += [PSCustomObject]@{
+                    title = $n.title
+                    href  = $n.slug
+                    level = $level
+                }
+                $result += Build-Navigation $n.children -currentLevel $level
+            }
         }
-
-        $result += $obj
     }
 
     return $result
 }
 
-function Flatten-SearchIndex {
-    param($nodes)
+function Build-SearchIndex {
+    param(
+        [Parameter(Mandatory)]
+        $nodes
+    )
 
     $result = @()
 
     foreach ($n in $nodes) {
-
-        if ($n.text) {
-            $result += [PSCustomObject]@{
-                title = $n.title
-                slug  = $n.slug
-                text  = $n.text
+        if ($n.content) {
+            foreach ($c in $n.Content) {
+                #$slug = if ($c.id -eq 1) { $n.Slug } else { "$($n.Slug)#$($c.Anchor)" } #Hier
+                $result += [PSCustomObject]@{
+                    title = $c.Headline
+                    href  = $c.Href
+                    text = $c.Content
+                }
             }
         }
-
-        # Unterüberschriften (H2/H3)
-        if ($n.children) {
-
-            foreach ($c in $n.children) {
-
-                if ($c.slug) {
-                    $result += [PSCustomObject]@{
-                        title = $c.title
-                        slug  = "$($n.slug)/$($c.slug)"
-                        text  = $c.title
-                    }
-                }
-
-                # falls deeper nesting existiert
-                if ($c.children) {
-                    $result += Flatten-SearchIndex $c.children
-                }
+        elseif ($n.children) {
+            $result += [PSCustomObject]@{
+                title = $n.title
+                href  = $n.slug
+                text = $c.Content
             }
+            $result += Build-SearchIndex $n.children
         }
     }
 
@@ -673,7 +736,7 @@ if (-not $PSBoundParameters.ContainsKey("ini")) {
 # Parse the INI file to get configuration settings
 $ParseConf = Parse-IniFile -Path $ini
 if ($ParseConf.debug.enabled) {
-    Write-Host "Debug mode is enabled. Preparing debug configuration..." -ForegroundColor Yellow
+    Write-Host "Debug mode is enabled. Preparing debug configuration..." -ForegroundColor RED
 }
 $ParseConf = Prepare-DebugConfig -config $ParseConf -SCRIPT_ROOT $scriptRoot
 $buildConf = $ParseConf | Check-ConfigValues
@@ -703,10 +766,9 @@ Remove-Item $outSearchIndex -Force -ErrorAction Ignore | Out-Null
 
 New-Item -ItemType Directory -Path $outMd | Out-Null
 if ($buildConf.debug.enabled) {
-    Write-Host "Creating debug output directory..." -ForegroundColor Yellow
+    Write-Host "Debug: Creating debug output directory..." -ForegroundColor Gray
     New-Item -ItemType Directory -Path $outDebug | Out-Null
 }
-
 
 # --------------------------------------------------
 # SCAN SRC and Build Tree Structure
@@ -715,35 +777,47 @@ Write-Host "Scanning source directory and building tree structure..." -Foregroun
 $tree = Build-Tree -BasePath $src
 
 if ($buildConf.debug.enabled) {
-    Write-Host "Writing debug tree structure to JSON..." -ForegroundColor Yellow
-    $tree | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.tree) -Encoding UTF8
+    Write-Host "DEBUG: Writing tree structure to JSON..." -ForegroundColor Gray
+    $tree | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.tree_default) -Encoding UTF8
+    Write-Host "DEBUG: Build tree structure complete." -ForegroundColor Gray
 }
 
 if ($null -eq $tree) {
+    Write-Error "No valid Markdown files found in the source directory. Build process aborted." -ForegroundColor DarkRed
+    Read-Host -Prompt "Press Enter to exit"
     exit
 }
-exit
+
 # --------------------------------------------------
 # COPY SOURCE FILES
 # --------------------------------------------------
 Write-Host "Copying source files to build directory..." -ForegroundColor Cyan
 Copy-Files -Source $src -Destination $outMd
 
-# --------------------------------------------------
-# GENERATE INDEX FILES
-# --------------------------------------------------
-Write-Host "Generating index files..." -ForegroundColor Cyan
-Process-Tree -Nodes $tree -CurrentPath $outMd
+if ($buildConf.debug.enabled) {
+    Write-Host "DEBUG: Source files copied to '$($outMD)'." -ForegroundColor Gray
+}
 
+# --------------------------------------------------
+# GENERATE INDEX FILES (Table of Contents)
+# --------------------------------------------------
+if ($buildConf.tableOfContents.enabled) {
+    Write-Host "Generating table of content files..." -ForegroundColor Cyan
+    Build-TableOfContents -Nodes $tree -CurrentPath $outMd
+
+    if ($buildConf.debug.enabled) {
+        Write-Host "DEBUG: Table of content files generated." -ForegroundColor Gray
+    }
+}
 
 # --------------------------------------------------
 # WRITE NAVIGATION
 # --------------------------------------------------
 Write-Host "Writing navigation structure to JSON..." -ForegroundColor Cyan
-$nav = ,@(Strip-Text $tree)
+$nav = ,@(Build-Navigation $tree.Children)
 
 if ($buildConf.debug.enabled) {
-    Write-Host "Writing debug navigation structure to JSON..." -ForegroundColor Yellow
+    Write-Host "DEBUG:Writing debug navigation structure to JSON..." -ForegroundColor Gray
     $nav | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.navigation) -Encoding UTF8
 }
 
@@ -751,13 +825,16 @@ $nav |
     ConvertTo-Json -Depth 20 |
     Set-Content $outNavIndex -Encoding UTF8
 
+if ($buildConf.debug.enabled) {
+    Write-Host "DEBUG: Navigation files generated." -ForegroundColor Gray
+}
 # --------------------------------------------------
 # WRITE Search-Index
 # --------------------------------------------------
-$searchIndex = ,@(Flatten-SearchIndex $tree)
+$searchIndex = ,@(Build-SearchIndex $tree)
 
 if ($buildConf.debug.enabled) {
-    Write-Host "Writing debug search index to JSON..." -ForegroundColor Yellow
+    Write-Host "DEBUG: Writing debug search index to JSON..." -ForegroundColor Gray
     $searchIndex | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.globalSearchIndex) -Encoding UTF8
 }
 
