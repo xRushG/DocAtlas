@@ -3,6 +3,20 @@ param (
     [int]$Port
 )
 
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+
+    Add-Type -AssemblyName PresentationFramework
+
+    [System.Windows.MessageBox]::Show(
+        "This script requires PowerShell 7 (pwsh).`nPlease run it in a PowerShell 7 session.",
+        "Error",
+        'OK',
+        'Error'
+    ) | Out-Null
+
+    exit 1
+}
+
 if (-not $PSBoundParameters.ContainsKey("DocsRoot")) {
     $DocsRoot = Join-Path $PSScriptRoot "html"
 }

@@ -40,6 +40,19 @@ body.dark #sidebar {
 }
 
 /* =========================================================
+   HOME BUTTON (THEME OVERRIDES)
+   ========================================================= */
+
+  body.dark #homeButton {
+    background: #2a2a2a;
+    border: 1px solid #555;
+    color: #ddd;
+  }
+
+  body.dark #homeButton:hover {
+    background: #3a3a3a;
+  }
+/* =========================================================
    SEARCHBAR (DARK MODE OVERRIDES)
    ========================================================= */
 body.dark #searchBoxContainer {
@@ -60,23 +73,21 @@ body.dark #searchBox::placeholder {
    NAVIGATION STATES (DARK MODE OVERRIDES)
    ========================================================= */
 
-body.dark .nav-item:hover,
-body.dark .nav-group:hover {
+body.dark .nav-item:hover {
   background: #3a3a3a;
 }
 
-body.dark .nav-item.active,
-body.dark .nav-group.active {
+body.dark .nav-item.active {
   background: #555;
 }
 
 /* Dark mode link hover inside content */
-body.dark #content ul li a:hover {
+body.dark #content-div ul li a:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
 /* Dark mode nested list border */
-body.dark #content ul ul {
+body.dark #content-div ul ul {
   border-left: 2px solid rgba(255, 255, 255, 0.12);
 }
 /* =========================================================
@@ -113,7 +124,7 @@ body.dark .copy-button:hover {
 /* =========================================================
    THEME TOGGLE BUTTON
    ========================================================= */
-
+h1 { text-align: left; }
 #themeToggle {
   position: fixed;
   bottom: 15px;
@@ -157,8 +168,7 @@ body.dark .copy-button:hover {
 }
 
 #searchBoxContainer {
-    padding: 10px;
-    border-bottom: 1px solid var(--border-color, #ddd);
+    flex: 1;
 }
 
 /* Scrollable navigation area */
@@ -179,6 +189,48 @@ body.dark .copy-button:hover {
   max-width: 100%;
   height: auto;
 }
+
+/* =========================================================
+   Home + Search container
+   ========================================================= */
+
+#homeAndSearchbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+/* =========================================================
+   HOME BUTTON
+   ========================================================= */
+
+/* Home Button */
+#homeButton {
+  flex: 0 0 auto;
+
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 18px;
+
+  border-radius: 6px;
+  border: 1px solid #ccc;
+
+  background: #fff;
+  cursor: pointer;
+}
+
+#homeButton:hover {
+  background: #e6e6e6;
+}
+
 /* =========================================================
    SEARCHBAR ITEMS
    ========================================================= */
@@ -208,25 +260,25 @@ body.dark .copy-button:hover {
    NAVIGATION ITEMS
    ========================================================= */
 
-.nav-group {
-  padding: 5px;
-  cursor: pointer;
-}
-
 .nav-item {
   padding: 10px;
   cursor: pointer;
 }
 
+.nav-item[data-level="2"] { padding-left: 12px; }
+.nav-item[data-level="3"] { padding-left: 24px; }
+.nav-item[data-level="4"] { padding-left: 36px; }
+.nav-item[data-level="5"] { padding-left: 48px; }
+.nav-item[data-level="6"] { padding-left: 60px; }
+.nav-item[data-level="7"] { padding-left: 72px; }
+.nav-item[data-level="8"] { padding-left: 84px; }
+
 /* Hover state (light mode default) */
 .nav-item:hover,
-.nav-group:hover {
-  background: #ddd;
-}
+
 
 /* Active navigation item */
-.nav-item.active,
-.nav-group.active {
+.nav-item.active {
   background: #bbb;
   font-weight: bold;
 }
@@ -235,7 +287,7 @@ body.dark .copy-button:hover {
    MAIN CONTENT AREA
    ========================================================= */
 
-#content {
+#content-div{
   margin-left: 310px;
   padding: 30px;
 }
@@ -299,16 +351,16 @@ body.dark .copy-button:hover {
    LIST STYLING INSIDE CONTENT
    ========================================================= */
 
-#content ul {
+#content-div ul {
   list-style: none;
   padding-left: 0;
 }
 
-#content ul li {
+#content-div ul li {
   margin: 4px 0;
 }
 
-#content ul li a {
+#content-div ul li a {
   display: block;
   padding: 6px 10px;
   border-radius: 6px;
@@ -320,18 +372,18 @@ body.dark .copy-button:hover {
 }
 
 /* Hover effect for links */
-#content ul li a:hover {
+#content-div ul li a:hover {
   background: rgba(0, 0, 0, 0.06);
   padding-left: 14px;
 }
 
 /* Keep visited links visually identical */
-#content ul li a:visited {
+#content-div ul li a:visited {
   color: inherit;
 }
 
 /* Nested list indentation */
-#content ul ul {
+#content-div ul ul {
   margin-left: 14px;
   border-left: 2px solid rgba(0, 0, 0, 0.08);
   padding-left: 10px;

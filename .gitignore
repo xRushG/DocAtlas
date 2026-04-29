@@ -7,3 +7,12 @@
 # Generated assets
 /html/assets/navigation.json
 /html/assets/search-index.json
+
+
+# Ignore debug folder
+debug/
+
+# Ignore SRC
+src/*
+# But include
+!src/DocAtlas/
