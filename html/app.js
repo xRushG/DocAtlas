@@ -9,7 +9,7 @@ let miniSearch;
 const CONFIG = {
   dom: {
     nav: "nav",
-    content: "content",
+    content: "content-div",
     logo: "logo",
     themeToggle: "themeToggle",
     searchBox: "searchBox"
@@ -29,8 +29,6 @@ async function loadConfig() {
   const res = await fetch("app.json");
   if (!res.ok) throw new Error("app.json not found");
   APPCONFIG = await res.json();
-  
-  console.log(APPCONFIG);
 }
 
 /* --------------------------------------------------
@@ -172,31 +170,25 @@ async function loadMenu() {
   }
 }
 
-function renderNav(nodes, level = 0) {
-
-  if (level >= APPCONFIG.navigation.depth) return;
-
+function renderNav(nodes) {
   nodes.forEach(node => {
+    if (node.level < 2) return;
+    if (node.level > APPCONFIG.navigation.depth +1) return;
 
     const el = document.createElement("div");
-    el.className = level === 0 ? "nav-group" : "nav-item";
+  
+    el.className = "nav-item";
     el.textContent = node.title;
-    el.dataset.slug = node.slug;
+    el.dataset.href = node.href;
+    el.dataset.level = node.level;
 
     el.onclick = () => {
-      if (node.file) {
-        location.hash = node.slug;
-      }
+      location.hash = node.href;
     };
 
     document.getElementById(CONFIG.dom.nav).appendChild(el);
 
     pages.push(node);
-
-    if (node.children && Array.isArray(node.children)) {
-      renderNav(node.children, level + 1);
-    }
-
   });
 }
 
@@ -206,10 +198,8 @@ function renderNav(nodes, level = 0) {
 -------------------------------------------------- */
 
 async function loadPage(file, push = true, slug = null) {
-
+file = file.replaceAll("\\", "/");
   try {
-	  console.log("LoadPage: " + APPCONFIG.environment.markdownFolder + file);
-    //console.trace("loadPage called");
 	
     const res = await fetch(APPCONFIG.environment.markdownFolder + file);
     if (!res.ok) throw new Error("Page not found");
@@ -229,7 +219,7 @@ async function loadPage(file, push = true, slug = null) {
           return match;
         }
 
-        return `![${alt}](${basePath}${src})`;
+        return `![${alt}](${encodeURI(basePath + src)})`;
       }
     );
 
@@ -245,55 +235,17 @@ async function loadPage(file, push = true, slug = null) {
 
     renderer.heading = function (token) {
 
-      const raw = token.text;
-      const level = token.depth;
+  const raw = token.text;
+  const clean = raw.replace(/<[^>]+>/g, "");
+  const slug = createSlug(clean);
 
-      const clean = raw.replace(/<[^>]+>/g, "");
-      const slug = createSlug(clean);
-
-      headingStack = headingStack.slice(0, level - 1);
-      headingStack[level - 1] = slug;
-
-      const path = headingStack.join("/");
-
-      return `<h${level} id="${path}">${raw}</h${level}>`;
-    };
+  return `<h${token.depth} id="${slug}">${raw}</h${token.depth}>`;
+};
 
     document.getElementById(CONFIG.dom.content).innerHTML =
       marked.parse(fixedMd, { renderer });
 
-    /*document.querySelectorAll("#content pre code").forEach((block) => {
-      // Syntax Highlight
-      hljs.highlightElement(block);
-
-      const pre = block.parentElement;
-
-      // Wrapper erstellen
-      const wrapper = document.createElement("div");
-      wrapper.className = "code-block";
-
-      pre.parentNode.insertBefore(wrapper, pre);
-      wrapper.appendChild(pre);
-
-      // Copy Button
-      const button = document.createElement("button");
-      button.className = "copy-button";
-      button.textContent = "Copy";
-
-      button.onclick = () => {
-
-        navigator.clipboard.writeText(block.innerText);
-
-        button.textContent = "Copied!";
-        setTimeout(() => {
-          button.textContent = "Copy";
-        }, 1500);
-      };
-
-      wrapper.appendChild(button);
-
-    });*/
-    document.querySelectorAll("#content pre code").forEach((block) => {
+    document.querySelectorAll(`#${CONFIG.dom.content} pre code`).forEach((block) => {
 
       hljs.highlightElement(block);
 
@@ -341,13 +293,15 @@ async function loadPage(file, push = true, slug = null) {
       location.hash = slug;
     }
 
-	window.scrollTo(0, 0);
+	if (!location.hash.includes("::")) {
+  window.scrollTo(0, 0);
+}
 
     /* Update active navigation entry */
     document.querySelectorAll(".nav-item, .nav-group")
       .forEach(el => el.classList.remove("active"));
 
-    const active = document.querySelector(`[data-slug="${slug}"]`);
+    const active = document.querySelector(`[data-href="${location.hash.substring(1)}"]`);
     if (active) active.classList.add("active");
 
     return true;
@@ -364,13 +318,12 @@ function addPages(node) {
   pages.push({
     title: node.title,
     file: node.file,
-    slug: node.slug
+    slug: node.href
   });
 
   if (!node.children) return;
 
-  //if (!Array.isArray(node.children)) return;
-  if (node.children && !Array.isArray(node.children)) {
+   if (node.children && !Array.isArray(node.children)) {
     node.children = [node.children];
   }
 
@@ -387,8 +340,8 @@ async function loadSearch() {
 
   miniSearch = new MiniSearch({
     fields: ['title', 'text'],
-    storeFields: ['title', 'slug'],
-    idField: 'slug'
+    storeFields: ['title', 'href'],
+    idField: 'href'
   });
 
   miniSearch.addAll(docs);
@@ -408,7 +361,7 @@ function searchDocs(query) {
 
 function renderResults(results) {
 
-  const content = document.getElementById("content");
+  const content = document.getElementById(CONFIG.dom.content);
 
   let html = "<h1>Search Results</h1>";
 
@@ -416,7 +369,7 @@ function renderResults(results) {
 
     html += `
       <div class="search-result">
-        <a href="#${r.slug}">
+        <a href="#${r.href}">
           <strong>${r.title}</strong>
         </a>
       </div>
@@ -430,28 +383,31 @@ function renderResults(results) {
 -------------------------------------------------- */
 
 function handleHashChange() {
+
   const hash = location.hash.substring(1);
-  if (!hash) return;
+  //if (!hash) return;
 
-  let page = findPageBySlug(hash);
-let anchor = null;
+  let slug = hash;
+  let anchor = null;
 
-if (!page) {
-  const parts = hash.split("/");
-  let slug = parts.shift();
-  anchor = parts.join("/");
-
-  page = findPageBySlug(slug);
-}
-
-if (!page) return;
-
-loadPage(page.file, false, page.slug).then(() => {
-  if (anchor) {
-    const el = document.getElementById(anchor);
-    if (el) el.scrollIntoView();
+  // neues Format: slug::anchor
+  if (hash.includes("::")) {
+    const parts = hash.split("::");
+    slug = parts[0];
+    anchor = parts[1];
   }
-});
+
+  const page = pages.find(p => p.slug === slug);
+  if (!page) return;
+
+  loadPage(page.file, false, slug).then(() => {
+
+    if (anchor) {
+      const el = document.getElementById(anchor);
+      if (el) setTimeout(() => el.scrollIntoView(), 50);
+    }
+
+  });
 }
 
 window.addEventListener("hashchange", handleHashChange);
@@ -506,6 +462,10 @@ document.getElementById(CONFIG.dom.searchBox).addEventListener("input", e => {
   renderResults(results);
 
 });
+
+document.getElementById("homeButton").onclick = () => {
+  location.hash = "";
+};
 
 
 /* --------------------------------------------------

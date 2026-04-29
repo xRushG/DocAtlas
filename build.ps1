@@ -1,7 +1,7 @@
 param (
     [string] $ini
 )
-
+cls
 if ($PSVersionTable.PSVersion.Major -lt 7) {
 
     Add-Type -AssemblyName PresentationFramework
@@ -19,7 +19,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 #--------------------------------------------------
 #  INI file preperation
 #--------------------------------------------------
-function Parse-IniFile {
+function Read-IniFile {
 <# 
 .SYNOPSIS
     Parses a simple INI file
@@ -110,7 +110,7 @@ function Parse-IniFile {
     Write-Output ($iniData | ConvertTo-Json | ConvertFrom-Json)
 }
 
-function Prepare-DebugConfig{
+function Set-DebugConfig {
 <#
 .SYNOPSIS
     Prepares the debug configuration.
@@ -131,11 +131,12 @@ function Prepare-DebugConfig{
     $config.debug | Add-Member -Name navigation -Value "debug_nav.json" -MemberType NoteProperty
     $config.debug | Add-Member -Name globalSearchIndex -Value "debug_gsi.json" -MemberType NoteProperty
     $config.debug | Add-Member -Name searchIndexSufix -Value "debug_si_{0}.json" -MemberType NoteProperty
+    $config.debug | Add-Member -Name appConfig -Value "debug_appConfig.json" -MemberType NoteProperty
 
     return $config
 }
 
-function Check-ConfigValues {
+function Optimize-ConfigValues {
 <#
 .SYNOPSIS
     Checks and corrects the configuration values.
@@ -281,45 +282,6 @@ function Copy-Files {
     }
 }
 
-function Create-Index {
-<#
-.SYNOPSIS
-    Creates an index file for a directory.
-
-.DESCRIPTION
-    The function generates an index file containing a table of contents for the specified directory.
-#>
-    param(
-        [string]$Folder,
-        [array]$Children,
-        [string] $Name
-    )
-
-    #$file = Join-Path $Folder $buildConf.tableOfContents.name
-
-    if (Test-Path $file) {
-        return
-    }
-
-    $title = Split-Path $Folder -Leaf
-
-    $toc = @()
-    $toc += "# $title"
-    $toc += ""
-    $toc += "## Inhaltsverzeichnis"
-    $toc += ""
-
-    foreach ($child in $Children) {
-
-        if (-not $child.slug) { continue }
-
-        $toc += "- [$($child.title)](#$($child.slug))"
-    }
-
-    $toc | Set-Content $file -Encoding UTF8
-}
-
-
 # --------------------------------------------------
 #   Tree building and processing
 # -------------------------------------------------
@@ -334,7 +296,8 @@ function Build-Tree {
 
     $global:UsedSlugs = @{}
 
-    $title = Split-Path $BasePath -Leaf
+    $title = "Home"
+
     #$FullContent = ""
     $Content = @()
 
@@ -345,10 +308,10 @@ function Build-Tree {
         $title = Get-Title $indexFile
     }
 
-    $children = Append-Tree -BasePath $BasePath -ParentSlug ""
+    $children = Write-Tree -BasePath $BasePath -ParentSlug ""
 
     return [PSCustomObject]@{
-        File         = $indexFile
+        IndexFile    = $indexFile
 
         Title        = $title
         #$FullContent = $FullContent
@@ -359,7 +322,7 @@ function Build-Tree {
     }
 }
 
-function Append-Tree {
+function Write-Tree {
     param (
         [Parameter(Mandatory)]
         [string]$BasePath,
@@ -414,7 +377,7 @@ function Append-Tree {
                 exit
             }
 
-            $children = Append-Tree -BasePath $entry.FullName -ParentSlug $slug
+            $children = Write-Tree -BasePath $entry.FullName -ParentSlug $slug
 
             if ($children.Count -eq 0 -and -not (Test-Path $indexFile)) {
                 continue
@@ -438,6 +401,7 @@ function Append-Tree {
 
             $localSlug = Get-Slug $title
             $slug = if ($ParentSlug) { "$ParentSlug/$localSlug" } else { $localSlug }
+
             if ($global:UsedSlugs.ContainsKey($slug)) {
                 Write-Error "Duplicate slug detected: '$slug' (File/Folder: $($entry.FullName))"
                 Read-Host -Prompt "Press Enter to continue"
@@ -495,16 +459,20 @@ function Split-MarkdownSections {
     $id = 0
 
     $lines = $Markdown -split "`r?`n"
-
+    $codeBlock = $false
     foreach ($line in $lines) {
 
-        if ($line -match '^(#{1,6})\s+(.*)') {
+        if ($line -match '^```') {
+            $codeBlock = -not $codeBlock
+        }
+
+        if (-not $codeBlock -and $line -match '^(#{1,6})\s+(.*)') {
 
             if ($currentHeader) {
                 $baseAnchor = Get-Slug $currentHeader
  
                 $anchor = Get-UniqueAnchor -BaseAnchor $baseAnchor -UsedAnchors $usedAnchors
-                $href = if ($id -eq 1) { $Slug } else { "$($Slug)#$($anchor)" }
+                $href = if ($id -eq 1) { $Slug } else { "$($Slug)::$($anchor)" }
 
                 $sections += [PSCustomObject]@{
                     Id      = $id
@@ -531,7 +499,7 @@ function Split-MarkdownSections {
         $baseAnchor = Get-Slug $currentHeader
 
         $anchor = Get-UniqueAnchor -BaseAnchor $baseAnchor -UsedAnchors $usedAnchors
-        $href = if ($id -eq 1) { $Slug } else { "$($Slug)#$($anchor)" }
+        $href = if ($id -eq 1) { $Slug } else { "$($Slug)::$($anchor)" }
 
         $sections += [PSCustomObject]@{
             Id       = $id
@@ -547,113 +515,12 @@ function Split-MarkdownSections {
     return $sections
 }
 
-function Build-TableOfContents {
-<# 
-.SYNOPSIS
-    Recursively processes a tree structure and creates index files for each directory.
-
-.DESCRIPTION
-    The function traverses the tree structure and creates index files for each directory, containing a table of contents.
-#>
-    param(
-        [array]$Nodes,
-        [string]$CurrentPath
-    )
-
-    foreach ($node in $Nodes) {
-        if ($node.Content.Count -gt 0) {
-            continue
-        }
-
-        $IndexFileName = $buildConf.tableOfContents.name?.Trim() ?? "index.md"
-        $folder = Join-Path $CurrentPath $node.title
-        
-        if ($node.Title -eq "src" -and $buildConf.tableOfContents.RootToc -eq $false) {
-            continue
-        }
-        elseif ($node.Title -eq "src" -and $buildConf.tableOfContents.RootToc -eq $true) {
-            $folder = Split-Path $folder -Parent
-        }
-        
-        $indexFile = Join-Path $folder $IndexFileName
-
-        if (-not (Test-Path $indexFile)) {
-            If ($ParseConf.debug.enabled) {
-                Write-Host "DEBUG: Creating index file: $indexFile" -ForegroundColor Magenta
-            }
-            Get-TOC -Children $node.Children | Set-Content $indexFile -Encoding UTF8
-        }
-
-        if ($node.Children.Count -gt 0) {
-            Build-TableOfContents -Nodes $node.Children -CurrentPath $folder
-        }
-    }
-}
-
-function Get-TOC {
-    param (
-        [Parameter(Mandatory)]
-        $Children,
-        $currentLevel = 0
-    )
-
-    $Depth = $buildConf.tableOfContents.depth ?? 2
-
-    $Headlines = @()
-
-    foreach ($child in $Children) {
-        
-
-        if ($child.File -and $child.Content.Count -gt 0) {
-            foreach ($part in $child.Content) {
-
-                $level = ($part.Level) + $currentLevel
-                $Headline = $part.Headline 
-                if ($level -le $Depth) {
-                    $href = $part.Href
-                    $indent = "  " * ($level - 1)
-
-                    If ($ParseConf.debug.enabled) {
-                        Write-Host "DEBUG: Adding headline $("$indent- [$headline]($href)")" -ForegroundColor Gray
-                    }
-
-                    $Headlines += "$indent- [$headline]($slugFragment)"
-                }
-            }
-
-            return $Headlines
-        }
-        
-        $level = $currentLevel + 1
-        $Headline = $child.Title ?? $child.Headline ?? "No Title"
-
-        if ($level -le $Depth) {
-            $indent = "  " * ($level - 1)
-
-            $href = $part.Href
-
-            If ($ParseConf.debug.enabled) {
-                Write-Host "DEBUG: Adding headline $("$indent- [$headline]($href)")" -ForegroundColor Gray
-            }
-
-            $Headlines += "$indent- [$headline]($href)"
-
-            if ($child.Children?.Count -gt 0) {
-                $Headlines += Get-TOC -Children $child.Children -CurrentLevel $level
-            }
-        }
-    }
-    return $Headlines
-}
-
 function Build-Navigation {
     param(
         [Parameter(Mandatory)]
         $nodes,
         $currentLevel = 0
     )
-
-    $maxDepth = $buildConf.navigation.depth ?? 2
     $result = @()
 
     foreach ($n in $nodes) {
@@ -661,28 +528,74 @@ function Build-Navigation {
             foreach ($c in $n.Content) {
                 $level = ($c.Level) + $currentLevel
 
-                if ($level -le $maxDepth) {
+                
                     $result += [PSCustomObject]@{
                         title = $c.Headline
                         href  = $c.Href
                         level = $level
+                        file  = $n.File -replace [regex]::Escape("$scriptRoot\src\"), ''
                     }
-                }
+                
             }
         }
         elseif ($n.children) {
 
             $level = $currentLevel + 1
 
-            if ($level -le $maxDepth) {
+            
                 $result += [PSCustomObject]@{
                     title = $n.title
                     href  = $n.slug
                     level = $level
+                    file = $n.IndexFile -replace [regex]::Escape("$scriptRoot\src\"), ''
                 }
                 $result += Build-Navigation $n.children -currentLevel $level
-            }
+            
         }
+    }
+
+    return $result
+}
+
+function Build-TableOfContents {
+    param(
+        [array]$Entries,
+        [int]$StartIndex
+    )
+
+    $Depth = $buildConf.tableOfContents.depth ?? 2
+
+    $result = @()
+	$test = $buildConf.tableOfContents.Headline
+    $result += "# $($test.Trim())`n"
+    $result += "`n"
+
+    $baseLevel = $Entries[$StartIndex].level
+
+    for ($i = $StartIndex + 1; $i -lt $Entries.Count; $i++) {
+
+        $entry = $Entries[$i]
+
+        if ($entry.level -le $baseLevel) {
+            break
+        }
+
+        $relLevel = $entry.level - $baseLevel
+
+        if ($relLevel -gt $Depth) {
+            continue
+        }
+
+        #if ($relLevel -eq 1) {
+        #    $result += ""
+        #    $result += "# $($entry.title)"
+        #    #continue
+        #}
+
+        $indent = "  " * ($relLevel - 1)
+
+        $line = "$indent- [$($entry.title)](#$($entry.href))"
+        $result += $line
     }
 
     return $result
@@ -698,8 +611,8 @@ function Build-SearchIndex {
 
     foreach ($n in $nodes) {
         if ($n.content) {
+            
             foreach ($c in $n.Content) {
-                #$slug = if ($c.id -eq 1) { $n.Slug } else { "$($n.Slug)#$($c.Anchor)" } #Hier
                 $result += [PSCustomObject]@{
                     title = $c.Headline
                     href  = $c.Href
@@ -734,12 +647,12 @@ if (-not $PSBoundParameters.ContainsKey("ini")) {
 }
 
 # Parse the INI file to get configuration settings
-$ParseConf = Parse-IniFile -Path $ini
+$ParseConf = Read-IniFile -Path $ini
 if ($ParseConf.debug.enabled) {
     Write-Host "Debug mode is enabled. Preparing debug configuration..." -ForegroundColor RED
 }
-$ParseConf = Prepare-DebugConfig -config $ParseConf -SCRIPT_ROOT $scriptRoot
-$buildConf = $ParseConf | Check-ConfigValues
+$ParseConf = Set-DebugConfig -config $ParseConf -SCRIPT_ROOT $scriptRoot
+$buildConf = $ParseConf | Optimize-ConfigValues
 
 # Define source and build paths based on the configuration
 # Source folder from which the content is read. Must be located inside the root directory
@@ -766,7 +679,8 @@ Remove-Item $outSearchIndex -Force -ErrorAction Ignore | Out-Null
 
 New-Item -ItemType Directory -Path $outMd | Out-Null
 if ($buildConf.debug.enabled) {
-    Write-Host "Debug: Creating debug output directory..." -ForegroundColor Gray
+    Write-Host "[Debug] Creating debug output directory..." -ForegroundColor Gray
+    Write-Host "$("   " * 2)'$outDebug'" -ForegroundColor DarkMagenta
     New-Item -ItemType Directory -Path $outDebug | Out-Null
 }
 
@@ -777,9 +691,9 @@ Write-Host "Scanning source directory and building tree structure..." -Foregroun
 $tree = Build-Tree -BasePath $src
 
 if ($buildConf.debug.enabled) {
-    Write-Host "DEBUG: Writing tree structure to JSON..." -ForegroundColor Gray
+    Write-Host "[Debug]  $("   " * 1) Writing tree structure to JSON..." -ForegroundColor Gray
     $tree | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.tree_default) -Encoding UTF8
-    Write-Host "DEBUG: Build tree structure complete." -ForegroundColor Gray
+    Write-Host "[Debug] $("   " * 2) Build tree structure complete." -ForegroundColor DarkGreen
 }
 
 if ($null -eq $tree) {
@@ -795,30 +709,21 @@ Write-Host "Copying source files to build directory..." -ForegroundColor Cyan
 Copy-Files -Source $src -Destination $outMd
 
 if ($buildConf.debug.enabled) {
-    Write-Host "DEBUG: Source files copied to '$($outMD)'." -ForegroundColor Gray
-}
-
-# --------------------------------------------------
-# GENERATE INDEX FILES (Table of Contents)
-# --------------------------------------------------
-if ($buildConf.tableOfContents.enabled) {
-    Write-Host "Generating table of content files..." -ForegroundColor Cyan
-    Build-TableOfContents -Nodes $tree -CurrentPath $outMd
-
-    if ($buildConf.debug.enabled) {
-        Write-Host "DEBUG: Table of content files generated." -ForegroundColor Gray
-    }
+    Write-Host "[Debug]  $("   " * 1) Source files copied to" -ForegroundColor Gray
+    Write-Host "$("   " * 2) '$outMD'" -ForegroundColor DarkMagenta
 }
 
 # --------------------------------------------------
 # WRITE NAVIGATION
 # --------------------------------------------------
 Write-Host "Writing navigation structure to JSON..." -ForegroundColor Cyan
-$nav = ,@(Build-Navigation $tree.Children)
+$nav = ,@(Build-Navigation $tree)
 
 if ($buildConf.debug.enabled) {
-    Write-Host "DEBUG:Writing debug navigation structure to JSON..." -ForegroundColor Gray
+    Write-Host "[Debug] $("   " * 1) Writing debug navigation structure to JSON..." -ForegroundColor Gray
     $nav | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.navigation) -Encoding UTF8
+    Write-Host "[Debug] $("   " * 2) Debug navigation structure complete." -ForegroundColor Gray
+
 }
 
 $nav |
@@ -826,32 +731,89 @@ $nav |
     Set-Content $outNavIndex -Encoding UTF8
 
 if ($buildConf.debug.enabled) {
-    Write-Host "DEBUG: Navigation files generated." -ForegroundColor Gray
+    Write-Host "[Debug] $("   " * 1) Navigation files generated." -ForegroundColor DarkGreen
 }
+
+# --------------------------------------------------
+# GENERATE INDEX FILES (Table of Contents)
+# --------------------------------------------------
+if ($buildConf.tableOfContents.enabled) {
+    Write-Host "Generating table of content files..." -ForegroundColor Cyan
+    $tocCollection = $nav[0]
+    for ($i = 0; $i -lt $tocCollection.Count; $i++) {
+
+        if ($tocCollection[$i].file -like "*TableOfContent.md") {
+            $indexFile = Join-Path $outMD $tocCollection[$i].file
+            if ($buildConf.debug.enabled) {
+                Write-Host "[Debug] $("   " * 1) Write table of content:" -ForegroundColor Gray
+                Write-Host "$("   " * 2) '$indexFile'" -ForegroundColor DarkMagenta
+            }
+
+            Build-TableOfContents -Entries $tocCollection -StartIndex $i -Depth 2
+                | Set-Content $indexFile -Encoding UTF8
+
+            if ($buildConf.debug.enabled) {
+                Write-Host "[Debug] $("   " * 1) Table of content generated." -ForegroundColor DarkGreen
+            }
+        }
+    }
+
+
+    if ($buildConf.debug.enabled) {
+        Write-Host "[Debug] Table of content files generated." -ForegroundColor DarkGreen
+    }
+}
+
 # --------------------------------------------------
 # WRITE Search-Index
 # --------------------------------------------------
+Write-Host "Writing search index to JSON..." -ForegroundColor Cyan
 $searchIndex = ,@(Build-SearchIndex $tree)
 
 if ($buildConf.debug.enabled) {
-    Write-Host "DEBUG: Writing debug search index to JSON..." -ForegroundColor Gray
+    Write-Host "[Debug] $("   " * 1) Writing debug search index to JSON..." -ForegroundColor Gray
     $searchIndex | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.globalSearchIndex) -Encoding UTF8
+    Write-Host "[Debug] $("   " * 2) Debug search index complete." -ForegroundColor Gray
 }
 
 $searchIndex |
     ConvertTo-Json -Depth 5 |
     Set-Content $outSearchIndex -Encoding UTF8
 
+if ($buildConf.debug.enabled) {
+    Write-Host "[Debug] $("   " * 1) Search index files generated." -ForegroundColor DarkGreen
+}
+
 # --------------------------------------------------
 # WRITE APPLICATION CONFIGURATION
 # --------------------------------------------------
 Write-Host "Writing application configuration to JSON..." -ForegroundColor Cyan
-($buildConf | ConvertTo-Json -Depth 5) -replace "\\\\","/" | 
+$appConfig = @{}
+
+foreach ($prop in $buildConf.PSObject.Properties) {
+     if ($prop.Name -ne 'debug') {
+        $appConfig[$prop.Name] = $prop.Value
+    }
+}
+
+if ($buildConf.debug.enabled) {
+    Write-Host "[Debug] $("   " * 1) Writing debug application configuration to JSON..." -ForegroundColor Gray
+    $appConfig | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.appConfig) -Encoding UTF8
+    Write-Host "[Debug] $("   " * 2) Debug application configuration complete." -ForegroundColor Gray
+}
+
+($appConfig | ConvertTo-Json -Depth 5) -replace "\\\\","/" | 
     Set-Content $outAppConfig -Encoding UTF8 
  
+if ($buildConf.debug.enabled) {
+    Write-Host "[Debug] $("   " * 1) Application configuration files generated." -ForegroundColor DarkGreen
+}
 # --------------------------------------------------
 # Build complete
 # --------------------------------------------------
 Write-Host "Build process completed successfully." -ForegroundColor Green
-Start-Sleep -Seconds 5
+
+if (-not $buildConf.debug.enabled) {
+    Start-Sleep -Seconds 5
+}
 exit
