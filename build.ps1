@@ -219,6 +219,10 @@ function Get-CleanMarkdownContent {
     # Optional: remove HTML tags
     $content = [regex]::Replace($content, '<[^>]+>', '')
 
+    # remove custom md from docatlas
+    $content = [regex]::Replace($content, '::da:\w+', '')
+    $content = [regex]::Replace($content, '::da:end', '')
+
     return $content.Trim()
 }
 
@@ -627,6 +631,138 @@ function Build-SearchIndex {
     return $result
 }
 
+
+function Convert-DocAtlasMarkDown {
+
+    param (
+        [string]$InputFile,
+        [string]$OutputFile
+    )
+
+    $patterns = @{
+        'alert'     = @{ class="md-alert-box";     icon="🚨" }
+        'important' = @{ class="md-important-box"; icon="❕" }
+        'warning'   = @{ class="md-warning-box";   icon="⚠️" }
+        'question'  = @{ class="md-question-box";  icon="❔" }
+        'tip'       = @{ class="md-tip-box";       icon="💡" }
+        'info'      = @{ class="md-info-box";      icon="📖" }
+        'danger'    = @{ class="md-danger-box";    icon="⛔" }
+        'success'   = @{ class="md-success-box";   icon="✅" }
+        'note'      = @{ class="md-note-box";      icon="📝" }
+        'example'   = @{ class="md-example-box";   icon="📦" }
+    }
+
+    $lines = Get-Content $InputFile
+    $output = New-Object System.Collections.Generic.List[string]
+
+    $inBox = $false
+    $inCodeBlock = $false
+    $currentType = $null
+    $buffer = New-Object System.Collections.Generic.List[string]
+
+    foreach ($line in $lines) {
+
+        # in codeblock
+        if ($line -match '^```') {
+            $inCodeBlock = -not $inCodeBlock
+        }
+
+        if (-not $inCodeBlock) {
+            # START
+            if ($line -match '^::da:(\w+)(?:\s+(.*))?$') {
+                $type = $matches[1]
+                $title = $matches[2]
+
+                if ($patterns.ContainsKey($type)) {
+                    $inBox = $true
+                    $currentType = $type
+                    $buffer.Clear()
+
+                    # optional: Titel speichern
+                    if ($title) {
+                        $buffer.Add("<div class=`"md-box-title`">$($patterns[$type].icon) $title</div>")
+                    }
+
+                    continue
+                }
+            }
+
+            # END
+            if ($line -match '^::da:end') {
+                if ($inBox -and $currentType) {
+                    $meta = $patterns[$currentType]
+
+                    #$output.Add("<div class=`"md-box $($meta.class)`">")
+                    #$output.AddRange($buffer)
+                    #$output.Add("</div>")
+                    $output.Add("<div class=`"md-box $($meta.class)`">")
+$output.Add("<div class=`"md-box-content`">")
+$output.AddRange($buffer)
+$output.Add("</div>")
+$output.Add("</div>")
+
+                    $inBox = $false
+                    $currentType = $null
+                    $buffer.Clear()
+                    continue
+                }
+            }
+
+            if ($line -match '^::da:end' -and -not $inBox) {
+                Write-Warning "Found ::da:end without open box"
+            }
+        }
+
+        # CONTENT
+        if ($inBox) {
+            $buffer.Add($line)
+        }
+        else {
+            $output.Add($line)
+        }
+    }
+
+    Set-Content $OutputFile $output -Encoding UTF8
+}
+
+function Publish-MarkdownFiles {
+
+    param (
+        [string]$Source,
+        [string]$Destination
+    )
+
+    if (!(Test-Path $Destination)) {
+        New-Item -ItemType Directory -Path $Destination | Out-Null
+    }
+
+    Get-ChildItem $Source -Recurse | ForEach-Object {
+
+        $relative = $_.FullName.Substring($Source.Length)
+        $target = Join-Path $Destination $relative
+
+        $targetDir = Split-Path $target
+
+        if (!(Test-Path $targetDir)) {
+            New-Item -ItemType Directory -Path $targetDir | Out-Null
+        }
+
+        # Verzeichnisse überspringen
+        if ($_.PSIsContainer) {
+            return
+        }
+
+        if ($_.Extension -eq ".md") {
+            # Markdown transformieren
+            Convert-DocAtlasMarkDown -InputFile $_.FullName -OutputFile $target
+        }
+        else {
+            # ALLES andere einfach kopieren (inkl. Bilder)
+            Copy-Item $_.FullName -Destination $target -Force
+        }
+    }
+}
+
 # --------------------------------------------------
 # Prepare build environment
 # --------------------------------------------------
@@ -700,7 +836,9 @@ if ($null -eq $tree) {
 # COPY SOURCE FILES
 # --------------------------------------------------
 Write-Host "Copying source files to build directory..." -ForegroundColor Cyan
-Copy-Files -Source $src -Destination $outMd
+Publish-MarkdownFiles -Source $src -Destination $outMd
+
+#Copy-Files -Source $src -Destination $outMd
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug]  $("   " * 1) Source files copied to" -ForegroundColor Gray
