@@ -315,19 +315,3 @@ h1 { text-align: left; }
   border-left: 2px solid rgba(0, 0, 0, 0.08);
   padding-left: 10px;
 }
-
-
-/* =========================================================
-   STYLE FIXES FOR HIGHLIGHT.JS (DARK MODE OVERRIDES)
-     If using highlight.js, these ensure good contrast in both themes 
-   ========================================================= */
-.hljs {
-  background: #f3f3f3;
-  color: #222;
-}
-
-/* Dark mode */
-body.dark .hljs {
-  background: #2a2a2a;
-  color: #ddd;
-}
