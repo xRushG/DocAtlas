@@ -8,11 +8,13 @@ let miniSearch;
 */
 const CONFIG = {
   dom: {
-    nav: "nav",
-    content: "content-div",
-    logo: "logo",
-    themeToggle: "themeToggle",
-    searchBox: "searchBox"
+    sidebar: "da-sidebar-div",
+    logo: "da-logo-div",
+    homeButton: "da-home-btn",
+    searchBox: "da-searchBox-ipt",
+    navigation: "da-navigation-div",
+    themeToggle: "da-themeToggle-btn",
+    content: "da-content-div"
   },
 
   theme: {
@@ -59,6 +61,16 @@ function findPageBySlug(slug) {
 
 function getTheme() {
   return localStorage.getItem(CONFIG.theme.storageKey) || CONFIG.theme.default;
+}
+
+function setPageTitle() {
+  let pageTitle = APPCONFIG?.page?.title;
+
+  if (!pageTitle || pageTitle.trim() === "") {
+    pageTitle = "DocAtlas";
+  }
+
+  document.title = pageTitle;
 }
 
 function setTheme(theme) {
@@ -148,7 +160,7 @@ async function loadMenu() {
 
     const data = await res.json();
 
-    const nav = document.getElementById(CONFIG.dom.nav);
+    const nav = document.getElementById("da-navigation-div");
     nav.innerHTML = "";
 
     pages = [];
@@ -186,7 +198,7 @@ function renderNav(nodes) {
       location.hash = node.href;
     };
 
-    document.getElementById(CONFIG.dom.nav).appendChild(el);
+    document.getElementById(CONFIG.dom.navigation).appendChild(el);
 
     pages.push(node);
   });
@@ -298,7 +310,7 @@ file = file.replaceAll("\\", "/");
 }
 
     /* Update active navigation entry */
-    document.querySelectorAll(".nav-item, .nav-group")
+    document.querySelectorAll(".nav-item")
       .forEach(el => el.classList.remove("active"));
 
     const active = document.querySelector(`[data-href="${location.hash.substring(1)}"]`);
@@ -463,7 +475,7 @@ document.getElementById(CONFIG.dom.searchBox).addEventListener("input", e => {
 
 });
 
-document.getElementById("homeButton").onclick = () => {
+document.getElementById(CONFIG.dom.homeButton).onclick = () => {
   location.hash = "";
 };
 
@@ -471,11 +483,12 @@ document.getElementById("homeButton").onclick = () => {
 /* --------------------------------------------------
    Start application
 -------------------------------------------------- */
-(async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   await loadConfig();
+  await setPageTitle();
   await loadStyle();
   await loadSearch();
 
   initUI();
   init();
-})();
+});

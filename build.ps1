@@ -586,12 +586,6 @@ function Build-TableOfContents {
             continue
         }
 
-        #if ($relLevel -eq 1) {
-        #    $result += ""
-        #    $result += "# $($entry.title)"
-        #    #continue
-        #}
-
         $indent = "  " * ($relLevel - 1)
 
         $line = "$indent- [$($entry.title)](#$($entry.href))"

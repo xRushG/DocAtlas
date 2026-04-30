@@ -16,7 +16,7 @@ Main features:
 
 ---
 
-# Project Structure
+## Project Structure
 
 A typical DocAtlas project looks like this:
 
@@ -49,11 +49,11 @@ project-root/
 
 ---
 
-# 1. Configuration
+## 1. Configuration
 
 DocAtlas uses two configuration files:
 
-## build.ini
+### build.ini
 
 `build.ini` defines build‑time settings used by the PowerShell build script.
 
@@ -69,7 +69,7 @@ The build script reads this file when generating the documentation site.
 
 ---
 
-## app.json
+### app.json
 
 `app.json` contains configuration used by the frontend application.
 
@@ -93,7 +93,7 @@ UI options
 
 ---
 
-# 2. Build the Documentation (`build.ps1`)
+## 2. Build the Documentation (`build.ps1`)
 
 The build script scans the Markdown files inside the `src` directory and generates the static documentation site.
 
@@ -129,7 +129,7 @@ html/assets/search-index.json
 
 ---
 
-# 3. Search Functionality
+## 3. Search Functionality
 
 DocAtlas includes a built‑in **client‑side full‑text search** powered by **MiniSearch**.
 
@@ -159,7 +159,7 @@ Search results link directly to the relevant page.
 
 ---
 
-# 4. Syntax Highlighting
+## 4. Syntax Highlighting
 
 DocAtlas uses **Highlight.js** for client‑side syntax highlighting of Markdown code blocks.
 
@@ -184,7 +184,7 @@ Supported languages include:
 
 ---
 
-# 5. Code Copy Buttons
+## 5. Code Copy Buttons
 
 Every code block automatically receives a **Copy button**.
 
@@ -204,7 +204,7 @@ Get-Service
 
 ---
 
-# 6. Local HTTP Server (`startServer.ps1`)
+## 6. Local HTTP Server (`startServer.ps1`)
 
 A small PowerShell HTTP server is included for local testing.
 
@@ -235,7 +235,7 @@ http://localhost:8080
 
 ---
 
-# 7. Updating Frontend Libraries
+## 7. Updating Frontend Libraries
 
 DocAtlas includes helper scripts in the **tools** directory to update client‑side libraries.
 
@@ -243,7 +243,7 @@ These scripts download the latest versions from the CDN.
 
 ---
 
-## Update Highlight.js CSS
+### Update Highlight.js CSS
 
 ```
 tools/updateHighlight-css.ps1
@@ -253,7 +253,7 @@ Downloads the latest Highlight.js stylesheet used for syntax highlighting.
 
 ---
 
-## Update Highlight.js JavaScript
+### Update Highlight.js JavaScript
 
 ```
 tools/updateHighlight-js.ps1
@@ -263,7 +263,7 @@ Downloads the Highlight.js runtime library used for syntax highlighting.
 
 ---
 
-## Update Marked.js
+### Update Marked.js
 
 ```
 tools/updateMarked-js.ps1
@@ -275,7 +275,7 @@ Marked.js converts Markdown into HTML inside the browser.
 
 ---
 
-## Update MiniSearch
+### Update MiniSearch
 
 ```
 tools/updateMiniSearch-js.ps1
@@ -285,7 +285,7 @@ Updates the **MiniSearch** library used for full‑text search.
 
 ---
 
-# 8. Typical Workflow
+## 8. Typical Workflow
 
 ### 1. Edit documentation
 
@@ -332,7 +332,7 @@ Verify that the following features work correctly:
 
 ---
 
-# 9. Troubleshooting
+## 9. Troubleshooting
 
 ### Search does not work
 
