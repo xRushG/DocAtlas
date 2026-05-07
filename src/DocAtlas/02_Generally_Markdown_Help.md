@@ -34,6 +34,17 @@ Line 3<br>
 Line 4 after `<br>`
 ```
 
+
+> This is paragraph 1.
+> 
+> This is paragraph 2 (separated by an empty line).
+> 
+> Line 1 with a break␣␣
+> Line 2 after the break
+> 
+> Line 3<br>
+> Line 4 after `<br>`
+
 ---
 
 ## Text Formatting
@@ -41,18 +52,25 @@ Line 4 after `<br>`
 ```md
 *italic* or _italic_
 **bold** or __bold__
-***bold and italic***
-
+***bold and italic*** or ___bold and italic___
 ~~strikethrough~~
-
 `inline code`
 ```
+
+
+> *italic* or _italic_
+> 
+> **bold** or __bold__
+> 
+> ***bold and italic***
+> 
+> ~~strikethrough~~
+> 
+> `inline code`
 
 ---
 
 ## Lists
-
-### Unordered Lists
 
 ```md
 - Item 1
@@ -60,10 +78,43 @@ Line 4 after `<br>`
   - Subitem 2.1
   - Subitem 2.2
 
-* Alternatively using asterisks
+
+Alternatively using:
+
+- dash -> (default)
+* asterisks
+° circle
+~ tilde
++ plus
+-> arrow right
+<- arrow left
+<3 heart
+<X cross
+<C check
 ```
 
-### Ordered Lists
+
+> - Item 1
+> - Item 2
+>   - Subitem 2.1
+>   - Subitem 2.2
+
+**Alternatively using:**
+
+> - dash -> (default)
+>   * asterisks
+> ° circle
+>   ~ tilde
+> + plus
+>   -> arrow right
+>     <- arrow left
+>   <3 heart
+> <X cross
+> <C check
+
+---
+
+## Ordered List
 
 ```md
 1. First item
@@ -72,25 +123,69 @@ Line 4 after `<br>`
    2. Subitem
 ```
 
+> 1. First item
+> 2. Second item
+>     1. Subitem
+>     2. Subitem
+
+
 ---
 
-## Links & Images
+## Task Lists
 
-### Links
+(Supported by GitHub and many Markdown renderers.)
 
 ```md
-[Link text](https://example.com)
-
-[Link with title](https://example.com "Tooltip text")
+- [ ] Open task
+- [x] Completed task
+- [ ] Another task
 ```
 
-### Images
+
+> - [ ] Open task
+> - [x] Completed task
+> - [ ] Another task
+
+---
+
+## Links
+
+```md
+Whitout tooltip text:
+[Link text](https://example.com)
+
+Whit tooltip text
+[Link with title](https://example.com "Tooltip text")
+
+Auto Url
+<https://www.example.org>
+
+Auto Mail
+<mail@example.com>
+
+```
+
+> *Whitout tooltip text* <br>
+> [Link text for example.com](https://example.com)
+>
+> *Example whit tooltip text* <br>
+> [Link text for example.com with Tooltip](https://example.com "Tooltip text")
+>
+> *Auto Url* <br>
+> <https://www.example.com>
+>
+> *Auto Mail* <br>
+> <mail@example.com>
+
+
+## Images
 
 ```md
 ![Alt text](image.png)
 
 ![Alt text with title](image.png "Image title")
 ```
+
 
 ---
 
@@ -99,24 +194,81 @@ Line 4 after `<br>`
 ```md
 > This is a quote.
 > It can span multiple lines.
-
-> Quote level 1
->> Quote level 2 (nested)
+> 
+> Or lists:
+> * List 1
+> * List 2
+> 
+> 
+> After list, go on in quoted area 
+> Quote level 1 
+>> Quote level 2 (nested) 
+> 
+> Add inline Code 
+>> `Inline code`
+>>> Up to depth of six
 ```
+
+### Example
+> This is a quote.
+> It can span multiple lines.
+> 
+> Or lists:
+> * List 1
+> * List 2
+> 
+> 
+> After list, go on in quoted area 
+> Quote level 1 
+>> Quote level 2 (nested) 
+> 
+> Add inline Code 
+>> `Inline code`
+>>> Up to depth of six
+
 
 ---
 
-## Code
-
-### Inline Code
+## Inline Code
 
 ```md
 Use `single backticks` for inline code.
 ```
 
-### Code Blocks (Fenced Code Blocks)
+>
+> Use `single backticks` for inline code.
+>
 
-Use three backticks before and after the block, optionally with a language identifier:
+## Code Blocks (Fenced Code Blocks)
+
+Use three or more backticks to open a code block, optionally followed by a language identifier. If you open the block with more than three backticks, you must close it with the same number of backticks. 
+
+The advantage becomes clear with your example (its opend with four backticks):
+
+````md
+
+```bash
+echo "Code block with language (bash)"
+ls -la
+```
+
+````
+
+By opening the outer block with four backticks, you can include an inner block that uses three backticks without prematurely closing the outer block.
+
+
+::da:important Concrete benefits
+The inner code block remains visibly intact and syntactically correct (including language).
+No escaping or modification of the inner code is required.
+The parser can clearly distinguish how many backticks where used to open and needed to close.
+::da:end
+
+::da:alert  Attention
+Improper use of Markdown can break the parser.
+::da:end
+
+
+### Exampels
 
 ```text
 This is a code block without syntax highlighting.
@@ -140,12 +292,42 @@ ls -la
 ## Horizontal Rule
 
 ```md
+
 ---
-***
-___
+
+---*
+
+---_
+
+---.
+
 ```
 
 All three variants create a horizontal separator line.
+
+### Examples
+
+*hr-thin*
+
+
+---
+
+
+*hr-symbol*
+
+
+---*
+
+
+*hr-dashed*
+
+
+---_
+
+
+*hr-doted*
+
+---.
 
 ---
 
@@ -167,17 +349,24 @@ Alignment:
 | More text | More text  | More text |
 ```
 
----
+### Examples
 
-## Task Lists
 
-(Supported by GitHub and many Markdown renderers.)
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Value A  | Value B  | Value C  |
+| 1        | 2        | 3        |
 
-```md
-- [ ] Open task
-- [x] Completed task
-- [ ] Another task
-```
+
+With Alignment:
+
+
+| Left      | Centered   | Right     |
+|:----------|:----------:|----------:|
+| Text      | Text       | Text      |
+| More text | More text  | More text |
+
+
 
 ---
 
@@ -195,6 +384,14 @@ Some renderers allow HTML directly inside Markdown (for example `<details>`):
 
 > Note: HTML support depends on the renderer.
 
+### Example
+
+<details>
+  <summary>Expandable section</summary>
+
+  Content that can be expanded or collapsed.
+</details>
+
 ---
 
 ## Escaping Characters
@@ -207,22 +404,13 @@ If a character should **not** be interpreted as Markdown, it can be escaped with
 \[square brackets\]
 ```
 
----
 
-## (Optional) Formulas with LaTeX Syntax
+\*this text is not italic\*
 
-Whether formulas are rendered depends on the renderer or plugin being used.
+\# This is not a heading
 
-Common convention:
+\[square brackets\]
 
-- Inline: `\( a^2 + b^2 = c^2 \)`
-- Block:
-
-```tex
-\[
-  E = mc^2
-\]
-```
 
 ---
 

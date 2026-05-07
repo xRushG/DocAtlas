@@ -26,7 +26,7 @@ project-root/
 ├─ src/                        # Markdown documentation source
 │
 ├─ html/                    
-│   ├─ md/					   # SRC documentation sites and generated index files
+│   ├─ sites/				   # SRC documentation sites and generated index files
 │   ├─ assets/
 │   │   ├─ navigation.json	   # generated navigation
 │   │   ├─ search-index.json   # generated search index
@@ -39,7 +39,6 @@ project-root/
 ├─ tools/                      # Helper scripts for library updates
 │   ├─ updateHighlight-css.ps1
 │   ├─ updateHighlight-js.ps1
-│   ├─ updateMarked-js.ps1
 │   └─ updateMiniSearch-js.ps1
 │
 ├─ build.ps1                   # Documentation build script
@@ -261,17 +260,6 @@ tools/updateHighlight-js.ps1
 
 Downloads the Highlight.js runtime library used for syntax highlighting.
 
----
-
-### Update Marked.js
-
-```
-tools/updateMarked-js.ps1
-```
-
-Updates the **Marked.js** Markdown renderer.
-
-Marked.js converts Markdown into HTML inside the browser.
 
 ---
 
