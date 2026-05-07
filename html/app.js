@@ -49,10 +49,6 @@ function createSlug(text) {
     .replace(/\s+/g, "-");
 }
 
-/* Lookup page by slug inside the flat page index */
-function findPageBySlug(slug) {
-  return pages.find(p => p.slug === slug);
-}
 
 
 /* --------------------------------------------------
@@ -102,7 +98,7 @@ function updateToggleIcon() {
 function loadLogo() {
 
   const logoDiv = document.getElementById(CONFIG.dom.logo);
-
+  if (!logoDiv) return;
   if (!APPCONFIG.logo?.enabled) {
     console.warn("[Config] Logo disabled.");
     logoDiv.style.display = "none";
@@ -126,9 +122,9 @@ function loadLogo() {
 
 
 async function loadStyle() {
-  if (APPCONFIG.styles.useCustom == false)  return;
+  if (APPCONFIG.styles.useCustom == false) return;
   
-  if (APPCONFIG.styles.path == null || APPCONFIG.styles.path.trim() === "") {
+  if (!APPCONFIG.styles?.path || APPCONFIG.styles.path.trim() === "") {
     console.warn("Custom stylesheet path is empty. Using default stylesheet.");
     return;
   }
@@ -138,7 +134,6 @@ async function loadStyle() {
   link.rel = "stylesheet";
   link.href = custom;
 
-  // verhindert nur JS-seitige Eskalation
   link.onerror = () => {
     console.warn("[Config] Custom stylesheet not found:", custom);
   };
@@ -213,49 +208,25 @@ async function loadPage(file, push = true, slug = null) {
 file = file.replaceAll("\\", "/");
   try {
 	
-    const res = await fetch(APPCONFIG.environment.markdownFolder + file);
-    if (!res.ok) throw new Error("Page not found");
+    const htmlFile = file.replace(/\.md$/, ".html");
+    const res = await fetch(APPCONFIG.environment.htmlSrcFolder + htmlFile);
 
-    const md = await res.text();
+    const html = await res.text();
 
 	const basePath =
-      APPCONFIG.environment.markdownFolder +
+      APPCONFIG.environment.htmlSrcFolder +
       file.substring(0, file.lastIndexOf("/") + 1);
 
-    /* Fix relative image paths inside markdown */
-    const fixedMd = md.replace(
-      /!\[(.*?)\]\((.*?)\)/g,
-      (match, alt, src) => {
+    const contentDiv = document.getElementById(CONFIG.dom.content);
+    contentDiv.innerHTML = html;
 
-        if (src.startsWith("http") || src.startsWith("/")) {
-          return match;
-        }
-
-        return `![${alt}](${encodeURI(basePath + src)})`;
+    // Relative Bild-URLs auf absoluten basePath umschreiben
+    contentDiv.querySelectorAll("img").forEach(img => {
+      const src = img.getAttribute("src");
+      if (src && !src.startsWith("http") && !src.startsWith("/") && !src.startsWith("data:")) {
+        img.src = basePath + src;
       }
-    );
-
-	const renderer = new marked.Renderer();
-
-    /*
-      Build hierarchical heading IDs:
-      H1 -> section
-      H2 -> section/subsection
-      H3 -> section/subsection/topic
-    */
-    let headingStack = [];
-
-    renderer.heading = function (token) {
-
-  const raw = token.text;
-  const clean = raw.replace(/<[^>]+>/g, "");
-  const slug = createSlug(clean);
-
-  return `<h${token.depth} id="${slug}">${raw}</h${token.depth}>`;
-};
-
-    document.getElementById(CONFIG.dom.content).innerHTML =
-      marked.parse(fixedMd, { renderer });
+    });
 
     document.querySelectorAll(`#${CONFIG.dom.content} pre code`).forEach((block) => {
 
@@ -335,7 +306,7 @@ function addPages(node) {
 
   if (!node.children) return;
 
-   if (node.children && !Array.isArray(node.children)) {
+  if (!Array.isArray(node.children)) {
     node.children = [node.children];
   }
 
@@ -362,6 +333,7 @@ async function loadSearch() {
 
 function searchDocs(query) {
 
+  if (!miniSearch) return [];
   if (!query || query.length < 2) return [];
 
   return miniSearch.search(query, {
@@ -390,6 +362,7 @@ function renderResults(results) {
 
   content.innerHTML = html;
 }
+
 /* --------------------------------------------------
    Hash routing
 -------------------------------------------------- */
@@ -425,11 +398,6 @@ function handleHashChange() {
 window.addEventListener("hashchange", handleHashChange);
 
 /* --------------------------------------------------
-   Higlighting
--------------------------------------------------- */
-
-
-/* --------------------------------------------------
    Initialization
 -------------------------------------------------- */
 
@@ -453,8 +421,6 @@ function init() {
    Event bindings
 -------------------------------------------------- */
 
-document.getElementById(CONFIG.dom.themeToggle).onclick = () => {
-
   const toggle = document.getElementById(CONFIG.dom.themeToggle);
 
   if (toggle) {
@@ -464,8 +430,6 @@ document.getElementById(CONFIG.dom.themeToggle).onclick = () => {
       setTheme(next);
     };
   }
-
-};
 
 document.getElementById(CONFIG.dom.searchBox).addEventListener("input", e => {
 
@@ -485,7 +449,7 @@ document.getElementById(CONFIG.dom.homeButton).onclick = () => {
 -------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", async () => {
   await loadConfig();
-  await setPageTitle();
+  setPageTitle();
   await loadStyle();
   await loadSearch();
 
