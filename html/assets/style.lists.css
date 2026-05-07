@@ -1,0 +1,110 @@
+/* ================================
+   CONTENT LISTS (DARK MODE OVERRIDES)
+================================ */
+
+/* Dark mode nested list border */
+body.dark #da-content-div ul ul {
+  border-left: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+/* ================================
+   TOC LIST (DARK MODE OVERRIDES)
+================================ */
+body.dark .da-toc-list a {
+  color: #60a5fa;
+}
+
+body.dark .da-toc-list a:hover {
+  color: #93c5fd;
+}
+
+/* Nested */
+.da-toc-list ul {
+  margin-left: 12px;
+  border-left: 2px solid rgba(37, 99, 235, 0.2);
+  padding-left: 10px;
+}
+
+body.dark .da-toc-list ul {
+  border-left: 2px solid rgba(96, 165, 250, 0.2);
+}
+
+/* ================================
+   TOC LIST
+================================ */
+
+.da-toc-list {
+  padding-left: 0;
+  margin: 0.5em 0;
+
+}
+
+#da-content-div .da-toc-list .list-dash::before {
+  display: none;
+}
+
+.da-toc-list a {
+  display: inline-block;
+  padding: 3px 8px 3px 0;
+  border-bottom: none;
+  font-size: 0.95em;
+}
+
+.da-toc-list a:hover {
+  padding-left: 6px;
+  border-bottom: none;
+}
+
+
+
+
+/* ================================
+   CONTENT LISTS
+================================ */
+#da-content-div ul,
+#da-content-div ol {
+  padding-left: 1.5em;
+}
+#da-content-div li::before {
+    margin-right: 15px;
+    display: inline-block;
+}
+#da-content-div .list-dash::before { /* - */
+    content: "\2012";
+}
+#da-content-div .list-arrow-right::before { /* ➤ */
+  content: "\27A4";
+}
+#da-content-div .list-arrow-left::before { /*  */
+  content: "\27A4";
+  transform: scaleX(-1);
+}
+#da-content-div .list-star::before { /* * */
+    content: "\2605";
+}
+#da-content-div .list-circle::before { /* ° */
+   content: "\25CF";
+}
+#da-content-div .list-tilde::before { /* ~ */
+    content: "\223C";
+}
+#da-content-div .list-plus::before { /* + */
+    content: "\271A";
+}
+#da-content-div .list-heart::before { /* ♥ */
+    content: "\2764";
+}
+#da-content-div .list-cross::before { /* ✘ */
+    content: "\2718";
+}
+#da-content-div .list-check::before { /* ✔ */
+    content: "\2714";
+}
+
+
+/* Nested list indentation */
+#da-content-div ul ul {
+  margin-left: 14px;
+  border-left: 2px solid rgba(0, 0, 0, 0.08);
+  padding-left: 10px;
+}

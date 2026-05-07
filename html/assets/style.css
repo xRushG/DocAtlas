@@ -1,0 +1,359 @@
+@import url("style.lists.css");
+@import url("style.baseBox.css");
+@import url("style.codeBlock.css");
+@import url("style.table.css");
+@import url("style.hr.css");
+@import url("style.blockquote.css");
+
+/* =========================================================
+   GLOBAL / BASE SETTINGS
+  ========================================================= */
+/* Enables smooth anchor scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  font-family: Arial, sans-serif;
+}
+
+ul {
+  list-style-type: none;
+}
+
+blockquote {
+	margin: 0;
+}
+
+h1 { 
+	text-align: left; 
+}
+
+/* ================================
+   LINKS (global)
+================================ */
+
+a {
+  color: #2563eb;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+a:hover {
+  color: #1d4ed8;
+  border-bottom-color: #1d4ed8;
+}
+
+a:visited {
+  color: #2563eb;
+}
+
+/* Dark Mode */
+body.dark a {
+  color: #60a5fa;
+}
+
+body.dark a:hover {
+  color: #93c5fd;
+  border-bottom-color: #93c5fd;
+}
+
+body.dark a:visited {
+  color: #60a5fa;
+}
+
+/* =========================================================
+   THEME BASE (LIGHT / DARK)
+   Applied via body class
+   ========================================================= */
+
+/* Light theme (default) */
+body.light {
+  background: #fff;
+  color: #000;
+}
+
+/* Dark theme base */
+body.dark {
+  background: #1e1e1e;
+  color: #ddd;
+}
+
+/* =========================================================
+   SIDEBAR (THEME OVERRIDES)
+   ========================================================= */
+
+body.dark #da-sidebar-div {
+  background: #2a2a2a;
+  border-right: 1px solid #444;
+}
+
+/* =========================================================
+   HOME BUTTON (THEME OVERRIDES)
+   ========================================================= */
+
+  body.dark #da-home-btn {
+    background: #2a2a2a;
+    border: 1px solid #555;
+    color: #ddd;
+  }
+
+  body.dark #da-home-btn:hover {
+    background: #3a3a3a;
+  }
+/* =========================================================
+   SEARCHBAR (DARK MODE OVERRIDES)
+   ========================================================= */
+body.dark #da-searchBox-div {
+  border-bottom: 1px solid #444;
+}
+
+body.dark #da-searchBox-ipt {
+  background: #1e1e1e;
+  border: 1px solid #555;
+  color: #ddd;
+}
+
+body.dark #da-searchBox-ipt::placeholder {
+  color: #888;
+}
+
+/* =========================================================
+   NAVIGATION STATES (DARK MODE OVERRIDES)
+   ========================================================= */
+
+body.dark .nav-item:hover {
+  background: #3a3a3a;
+}
+
+body.dark .nav-item.active {
+  background: #555;
+}
+
+
+/* =========================================================
+   THEME TOGGLE BUTTON (DARK MODE OVERRIDES)
+   ========================================================= */
+body.dark #da-themeToggle-btn {
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #ddd;
+}
+
+body.dark #da-themeToggle-btn:hover {
+  background: #3a3a3a;
+}
+
+
+
+/* =========================================================
+   THEME TOGGLE BUTTON
+   ========================================================= */
+
+#da-themeToggle-btn {
+  position: fixed;
+  bottom: 15px;
+  left: 15px;
+  z-index: 1000;
+
+  width: 42px;
+  height: 42px;
+
+  border-radius: 50%;
+  border: 1px solid #ccc;
+
+  background: #fff;
+  cursor: pointer;
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+#da-themeToggle-btn:hover {
+  transform: scale(1.05);
+}
+/* =========================================================
+   SIDEBAR LAYOUT
+   ========================================================= */
+
+#da-sidebar-div {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  width: clamp(260px, 22vw, 420px);
+  height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #f3f3f3;
+  border-right: 1px solid #ccc;
+
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#da-searchBox-div {
+    flex: 1;
+}
+
+/* Scrollable navigation area */
+#da-navigation-div {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+#da-navigation-div ul li a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease, padding-left 0.15s ease;
+}
+
+#da-navigation-div ul li a:hover {
+  background: rgba(0, 0, 0, 0.06);
+  padding-left: 14px;
+}
+
+/* Logo area inside sidebar */
+#da-logo-div {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #ccc;
+}
+
+#da-logo-div img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* =========================================================
+   Home + Search container
+   ========================================================= */
+
+#da-homeAndSearchbar-div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+/* =========================================================
+   HOME BUTTON
+   ========================================================= */
+
+/* Home Button */
+#da-home-btn {
+  flex: 0 0 auto;
+
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 18px;
+
+  border-radius: 6px;
+  border: 1px solid #ccc;
+
+  background: #fff;
+  cursor: pointer;
+}
+
+#da-home-btn:hover {
+  background: #e6e6e6;
+}
+
+/* =========================================================
+   SEARCHBAR ITEMS
+   ========================================================= */
+
+#da-searchBox-ipt {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #ccc);
+    background: var(--input-bg, #fff);
+    color: var(--text-color, #222);
+    box-sizing: border-box;
+    outline: none;
+}
+
+#da-searchBox-ipt::placeholder {
+    color: #888;
+}
+
+#da-searchBox-ipt:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 2px rgba(74,144,226,0.2);
+}
+
+/* =========================================================
+   NAVIGATION ITEMS
+   ========================================================= */
+
+.nav-item {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.nav-item[data-level="2"] { padding-left: 12px; }
+.nav-item[data-level="3"] { padding-left: 24px; }
+.nav-item[data-level="4"] { padding-left: 36px; }
+.nav-item[data-level="5"] { padding-left: 48px; }
+.nav-item[data-level="6"] { padding-left: 60px; }
+.nav-item[data-level="7"] { padding-left: 72px; }
+.nav-item[data-level="8"] { padding-left: 84px; }
+
+/* Hover state (light mode default) */
+.nav-item:hover,
+.nav-item.active {
+  background: #bbb;
+  font-weight: bold;
+}
+
+.nav-section-header {
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-arrow {
+  font-size: 0.65em;
+  transition: transform 0.15s ease;
+}
+
+.nav-children {
+  overflow: hidden;
+}
+
+.nav-children .nav-item {
+  padding-left: calc(12px * (var(--level, 1)));
+}
+
+/* =========================================================
+   MAIN CONTENT AREA
+   ========================================================= */
+
+#da-content-div{
+  margin-left: clamp(260px, 22vw, 420px);
+  width: calc(100% - clamp(260px, 22vw, 420px));
+  padding: 30px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  width: calc(100% - 310px);
+}
+
