@@ -511,8 +511,8 @@ function Build-Navigation {
     )
 
     $result = @()
-
-    foreach ($n in $nodes) {
+    foreach ($n in $nodes) 
+    {
         if ($n.content) {
             foreach ($c in $n.Content) {
                 $level = ($c.Level) + $currentLevel
@@ -522,18 +522,20 @@ function Build-Navigation {
                     href  = $c.Href
                     level = $level
                     file  = $n.File -replace [regex]::Escape("$scriptRoot\src\"), ''
+                    html  = ('<div class="nav-item" data-href="{0}" data-level="{1}" data-file="{2}">{3}</div>' -f $c.Href, $level, (($n.File -replace [regex]::Escape("$scriptRoot\src\"), '') -replace '\\', '/'), $c.Headline)
                 }
             }
         }
         elseif ($n.children) {
             $level = $currentLevel + 1
 
-            $result += [PSCustomObject]@{
-                title = $n.title
-                href  = $n.slug
-                level = $level
-                file  = $n.IndexFile -replace [regex]::Escape("$scriptRoot\src\"), ''
-            }
+                $result += [PSCustomObject]@{
+                    title = $n.title
+                    href  = $n.slug
+                    level = $level
+                    file  = $n.IndexFile -replace [regex]::Escape("$scriptRoot\src\"), ''
+                    html = ('<div class="nav-item" data-href="{0}" data-level="{1}" data-file="{2}">{3}</div>' -f $n.slug, $level, (($n.IndexFile -replace [regex]::Escape("$scriptRoot\src\"), '') -replace '\\', '/'), $n.title)
+                }
             $result += Build-Navigation $n.children -currentLevel $level
         }
     }
@@ -1246,20 +1248,20 @@ $build = Join-Path $scriptRoot "html"
 
 # Output file paths
 $outAppConfig   = Join-Path $build "app.json"
-$outMd          = Join-Path $build $buildConf.environment.htmlSrcFolder
-$outNavIndex    = Join-Path $build $buildConf.environment.navigationIndex
+$outHtml          = Join-Path $build $buildConf.environment.htmlSrcFolder
 $outSearchIndex = Join-Path $build $buildConf.environment.searchIndex
 $outDebug       = $buildConf.debug.outPath
+$outIndexHTML   = Join-Path $build "index.html"
 
 # Clean up the build directory
 Write-Host "Cleaning up build directory..." -ForegroundColor Cyan
-Remove-Item $outMd          -Recurse -Force -ErrorAction Ignore | Out-Null
+Remove-Item $outHtml        -Recurse -Force -ErrorAction Ignore | Out-Null
 Remove-Item $outDebug       -Recurse -Force -ErrorAction Ignore | Out-Null
 Remove-Item $outAppConfig   -Force   -ErrorAction Ignore | Out-Null
-Remove-Item $outNavIndex    -Force   -ErrorAction Ignore | Out-Null
 Remove-Item $outSearchIndex -Force   -ErrorAction Ignore | Out-Null
+Remove-Item $outIndexHTML   -Force   -ErrorAction Ignore | Out-Null
 
-New-Item -ItemType Directory -Path $outMd | Out-Null
+New-Item -ItemType Directory -Path $outHtml | Out-Null
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] Creating debug output directory..." -ForegroundColor Gray
@@ -1289,11 +1291,11 @@ if ($null -eq $tree) {
 # Copy source files to build directory
 # --------------------------------------------------
 Write-Host "Copying source files to build directory..." -ForegroundColor Cyan
-Publish-MarkdownFiles -Source $src -Destination $outMd
+Publish-MarkdownFiles -Source $src -Destination $outHtml
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug]  $("   " * 1) Source files copied to" -ForegroundColor Gray
-    Write-Host "$("   " * 2) '$outMD'" -ForegroundColor DarkMagenta
+    Write-Host "$("   " * 2) '$outHtml'" -ForegroundColor DarkMagenta
 }
 
 # --------------------------------------------------
@@ -1308,9 +1310,6 @@ if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 2) Debug navigation structure complete." -ForegroundColor Gray
 }
 
-$nav |
-    ConvertTo-Json -Depth 20 |
-    Set-Content $outNavIndex -Encoding UTF8
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 1) Navigation files generated." -ForegroundColor DarkGreen
@@ -1327,7 +1326,7 @@ if ($buildConf.tableOfContents.enabled) {
 
         if ($tocCollection[$i].file -like "*TableOfContent.html") {
 
-            $indexhtml      = Join-Path $outMD $tocCollection[$i].file
+            $indexhtml      = Join-Path $outHtml $tocCollection[$i].file
             $indexPlacement = $indexhtml | Split-Path
             $indexmd        = [System.IO.Path]::ChangeExtension($indexhtml, ".md")
 
@@ -1400,6 +1399,52 @@ if ($buildConf.debug.enabled) {
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 1) Application configuration files generated." -ForegroundColor DarkGreen
+}
+
+# --------------------------------------------------
+# Build index.html from template
+# --------------------------------------------------
+function Build-NavGroupedHtml {
+    param([array]$Items, [int]$StartIdx, [int]$MinLevel)
+
+    $sb  = [System.Text.StringBuilder]::new()
+    $idx = $StartIdx
+
+    while ($idx -lt $Items.Count -and $Items[$idx].level -ge $MinLevel) {
+        $item       = $Items[$idx]
+        $cssLevel   = $item.level - 1
+        $nextDeeper = ($idx + 1 -lt $Items.Count) -and ($Items[$idx + 1].level -gt $item.level)
+
+        if ($nextDeeper) {
+            [void]$sb.AppendLine('<div class="nav-group">')
+            [void]$sb.AppendLine("  <div class=`"nav-item nav-level-$cssLevel`" data-href=`"$($item.href)`" data-file=`"$($item.file)`">$($item.title)</div>")
+            [void]$sb.AppendLine('  <div class="nav-children">')
+            $child = Build-NavGroupedHtml $Items ($idx + 1) ($item.level + 1)
+            [void]$sb.Append($child.Html)
+            $idx = $child.NextIdx
+            [void]$sb.AppendLine('  </div>')
+            [void]$sb.AppendLine('</div>')
+        } else {
+            [void]$sb.AppendLine("  <div class=`"nav-item nav-level-$cssLevel`" data-href=`"$($item.href)`" data-file=`"$($item.file)`">$($item.title)</div>")
+            $idx++
+        }
+    }
+
+    return @{ Html = $sb.ToString(); NextIdx = $idx }
+}
+
+Write-Host "Building index.html from template..." -ForegroundColor Cyan
+$tmplPath   = Join-Path $scriptRoot "res\index.html.tmpl"
+$tmplContent = Get-Content $tmplPath -Raw -Encoding UTF8
+
+$navItems = @($nav[0] | Where-Object { $_.level -gt 1 })
+$navHtml  = (Build-NavGroupedHtml $navItems 0 2).Html
+$tmplContent = $tmplContent -replace '<div id="da-navigation-div"></div>', "<div id=`"da-navigation-div`">`n`t`t`t`t$navHtml`n`t`t`t</div>"
+
+Set-Content $outIndexHTML $tmplContent -Encoding UTF8
+
+if ($buildConf.debug.enabled) {
+    Write-Host "[Debug] $("   " * 1) index.html written to '$outIndexHTML'." -ForegroundColor DarkGreen
 }
 
 # --------------------------------------------------

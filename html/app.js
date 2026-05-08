@@ -12,7 +12,6 @@ const CONFIG = {
     logo: "da-logo-div",
     homeButton: "da-home-btn",
     searchBox: "da-searchBox-ipt",
-    navigation: "da-navigation-div",
     themeToggle: "da-themeToggle-btn",
     content: "da-content-div"
   },
@@ -146,57 +145,43 @@ async function loadStyle() {
    Navigation / Sidebar
 -------------------------------------------------- */
 
-async function loadMenu() {
+function initNav() {
+  pages = [];
 
-  try {
+  document.querySelectorAll(".nav-item").forEach(el => {
+    pages.push({
+      title: el.textContent.trim(),
+      slug:  el.dataset.href,
+      file:  el.dataset.file
+    });
 
-    const res = await fetch(APPCONFIG.environment.navigationIndex);
-    if (!res.ok) throw new Error(APPCONFIG.environment.navigationIndex + " not found");
-
-    const data = await res.json();
-
-    const nav = document.getElementById("da-navigation-div");
-    nav.innerHTML = "";
-
-    pages = [];
-    data.forEach(node => addPages(node));
-    renderNav(data);
-
-	/* Initial page load when no hash exists */
-	if (!location.hash && pages.length > 0) {
-    location.hash = pages[0].slug;
-	}
-
-  } catch (err) {
-
-    console.error(err);
-
-    document.getElementById(CONFIG.dom.content).textContent =
-      "Failed to load navigation.";
-
-  }
-}
-
-function renderNav(nodes) {
-  nodes.forEach(node => {
-    if (node.level < 2) return;
-    if (node.level > APPCONFIG.navigation.depth +1) return;
-
-    const el = document.createElement("div");
-  
-    el.className = "nav-item";
-    el.textContent = node.title;
-    el.dataset.href = node.href;
-    el.dataset.level = node.level;
+    const group = el.parentElement?.classList.contains("nav-group") ? el.parentElement : null;
+    const isLevel1 = el.classList.contains("nav-level-1");
 
     el.onclick = () => {
-      location.hash = node.href;
+      if (group && !isLevel1) {
+        const opening = !group.classList.contains("expanded");
+        if (opening) {
+          document.querySelectorAll(".nav-group.expanded:not(.nav-group:has(> .nav-item.nav-level-1))")
+            .forEach(g => g.classList.remove("expanded"));
+        }
+        group.classList.toggle("expanded");
+      }
+      if (el.dataset.href) location.hash = el.dataset.href;
     };
-
-    document.getElementById(CONFIG.dom.navigation).appendChild(el);
-
-    pages.push(node);
   });
+
+  // Level-1 groups always expanded and non-collapsible
+  document.querySelectorAll(".nav-group").forEach(group => {
+    if (group.querySelector(":scope > .nav-item.nav-level-1")) {
+      group.classList.add("expanded");
+    }
+  });
+}
+
+function loadHomePage() {
+  const tocName = APPCONFIG?.tableOfContents?.name ?? "TableOfContent.html";
+  loadPage(tocName, false, "");
 }
 
 
@@ -296,23 +281,6 @@ file = file.replaceAll("\\", "/");
   }
 }
 
-function addPages(node) {
-
-  pages.push({
-    title: node.title,
-    file: node.file,
-    slug: node.href
-  });
-
-  if (!node.children) return;
-
-  if (!Array.isArray(node.children)) {
-    node.children = [node.children];
-  }
-
-  node.children.forEach(child => addPages(child));
-}
-
 /* --------------------------------------------------
    Search loading
 -------------------------------------------------- */
@@ -406,14 +374,13 @@ function initUI() {
 }
 
 function init() {
-
   loadLogo();
-
-  loadMenu().then(() => {
-    if (location.hash) {
-      handleHashChange();
-    }
-  });
+  initNav();
+  if (location.hash) {
+    handleHashChange();
+  } else {
+    loadHomePage();
+  }
 }
 
 
@@ -440,7 +407,8 @@ document.getElementById(CONFIG.dom.searchBox).addEventListener("input", e => {
 });
 
 document.getElementById(CONFIG.dom.homeButton).onclick = () => {
-  location.hash = "";
+  console.log("button clicked")
+  loadHomePage();
 };
 
 
