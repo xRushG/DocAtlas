@@ -133,6 +133,7 @@ function Set-DebugConfig {
     $config.debug | Add-Member -Name globalSearchIndex   -Value "debug_gsi.json"                 -MemberType NoteProperty
     $config.debug | Add-Member -Name searchIndexSufix    -Value "debug_si_{0}.json"              -MemberType NoteProperty
     $config.debug | Add-Member -Name appConfig           -Value "debug_appConfig.json"           -MemberType NoteProperty
+    $config.debug | Add-Member -Name mediaRegistry       -Value "debug_media_registry.json"      -MemberType NoteProperty
 
     return $config
 }
@@ -152,10 +153,80 @@ function Optimize-ConfigValues {
         $config
     )
 
-    # FIX 3: Normalise trailing separator -- accept both \ and /
+    # Normalise trailing separator -- accept both \ and /
     $config.environment.htmlSrcFolder = $config.environment.htmlSrcFolder.TrimEnd('\', '/') + '/'
+    $config.environment.allowedMedia  = $config.environment.allowedMedia -split(',')
 
     return $config
+}
+
+# --------------------------------------------------
+#  Media file registry and sanitization
+# --------------------------------------------------
+
+# Shared mapping: original relative path -> sanitized relative path.
+# Populated during Publish-MarkdownFiles and consumed by Apply-Inline.
+$script:MediaRegistry = @{}
+
+function Get-SanitizedMediaName {
+<#
+.SYNOPSIS
+    Returns a URL-safe path for a media asset and registers the mapping.
+
+.DESCRIPTION
+    Replaces underscores, spaces, and other URL-hostile characters in the
+    filename portion of the path with hyphens, lower-cases the result, and
+    appends -01/-02/... when the sanitized name would collide with an
+    already-registered entry in the same directory.
+    The mapping is stored in $script:MediaRegistry so both the Markdown
+    parser (Apply-Inline) and the file-copy step (Publish-MarkdownFiles)
+    produce consistent names.
+
+.PARAMETER Path
+    Original relative path as it appears in Markdown source (e.g. "img/Install_NSPIR_01.png").
+
+.PARAMETER DebugJsonPath
+    Optional path to write the current registry state as a JSON file.
+#>
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+        [string]$DebugJsonPath = $null
+    )
+
+    $Path = $Path -replace '\\', '/'
+
+    # Return cached result for paths already seen
+    if ($script:MediaRegistry.ContainsKey($Path)) {
+        return $script:MediaRegistry[$Path]
+    }
+
+    $lastSlash = $Path.LastIndexOf('/')
+    $dir  = if ($lastSlash -ge 0) { $Path.Substring(0, $lastSlash + 1) } else { '' }
+    $name = [System.IO.Path]::GetFileNameWithoutExtension($Path)
+    $ext  = [System.IO.Path]::GetExtension($Path).ToLower()
+
+    # Replace URL-hostile characters with hyphens, then collapse and trim
+    $safe = $name -replace '[_\s\(\)\[\]&#+%!@$\^]', '-'
+    $safe = ($safe -replace '-+', '-').Trim('-').ToLower()
+
+    $candidate = $dir + $safe + $ext
+
+    # Deduplicate: append counter if sanitized name is already taken by a different original
+    $counter = 0
+    while ($script:MediaRegistry.ContainsValue($candidate) -and
+           ($script:MediaRegistry.Keys | Where-Object { $script:MediaRegistry[$_] -eq $candidate -and $_ -ne $Path })) {
+        $counter++
+        $candidate = $dir + $safe + ('-{0:D2}' -f $counter) + $ext
+    }
+
+    $script:MediaRegistry[$Path] = $candidate
+
+    if ($DebugJsonPath) {
+        $script:MediaRegistry | ConvertTo-Json | Set-Content $DebugJsonPath -Encoding UTF8
+    }
+
+    return $candidate
 }
 
 # --------------------------------------------------
@@ -756,6 +827,9 @@ function Publish-MarkdownFiles {
     }
 
     Get-ChildItem $Source -Recurse | ForEach-Object {
+        if (-not $_.PSIsContainer -and ($buildConf.environment.allowedMedia -notcontains $_.Extension.TrimStart('.'))) {
+            return
+        }
 
         $relative = $_.FullName.Substring($Source.Length)
         if ([string]::IsNullOrWhiteSpace($relative)) {
@@ -763,7 +837,6 @@ function Publish-MarkdownFiles {
         }
 
         $target    = Join-Path $Destination $relative
-        $target    = [System.IO.Path]::ChangeExtension($target, ".html")
         $targetDir = Split-Path $target
 
         if (!(Test-Path $targetDir)) {
@@ -775,11 +848,17 @@ function Publish-MarkdownFiles {
 
         if ($_.Extension -eq ".md") {
             # Convert Markdown to HTML
+            $target    = [System.IO.Path]::ChangeExtension($target, ".html")
             Convert-DocAtlasMarkDown -InputFile $_.FullName -OutputFile $target
         }
         else {
-            # Copy all other files as-is (images, etc.)
-            Copy-Item $_.FullName -Destination $target -Force
+            # Copy media file under its sanitized name so src paths in HTML match
+            $relativeNorm    = ($relative -replace '\\', '/').TrimStart('/')
+            $sanitizedRel    = Get-SanitizedMediaName -Path $relativeNorm
+            $sanitizedTarget = Join-Path $Destination $sanitizedRel
+            $sanitizedDir    = Split-Path $sanitizedTarget
+            if (!(Test-Path $sanitizedDir)) { New-Item -ItemType Directory -Path $sanitizedDir | Out-Null }
+            Copy-Item $_.FullName -Destination $sanitizedTarget -Force
         }
     }
 }
@@ -950,8 +1029,18 @@ function Convert-DocAtlasMarkDown {
             return $key
         })
 
-        # 3. Apply inline patterns (links, bold, italic, etc.)
+        # 3. Images — resolved before emphasis patterns so underscores in
+        #    filenames are not mistaken for italic markers.
+        $line = [regex]::Replace($line, '!\[(.*?)\]\((.*?)\)', {
+            param($m)
+            $alt = $m.Groups[1].Value
+            $url = Get-SanitizedMediaName -Path $m.Groups[2].Value
+            return "<img src=`"$url`" alt=`"$alt`">"
+        })
+
+        # 4. Apply remaining inline patterns (links, bold, italic, etc.)
         foreach ($p in $inlinePatterns.Keys) {
+            if ($p -eq '!\[(.*?)\]\((.*?)\)') { continue }  # already handled above
             $line = $line -replace $p, $inlinePatterns[$p]
         }
 
@@ -1413,6 +1502,7 @@ $buildConf = $ParseConf | Optimize-ConfigValues
 $src   = Join-Path $scriptRoot "src"
 $build = Join-Path $scriptRoot "html"
 
+
 # Output file paths
 $outAppConfig   = Join-Path $build "app.json"
 $outHtml          = Join-Path $build $buildConf.environment.htmlSrcFolder
@@ -1463,6 +1553,9 @@ Publish-MarkdownFiles -Source $src -Destination $outHtml
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug]  $("   " * 1) Source files copied to" -ForegroundColor Gray
     Write-Host "$("   " * 2) '$outHtml'" -ForegroundColor DarkMagenta
+    $mediaRegistryPath = Join-Path $outDebug $buildConf.debug.mediaRegistry
+    $script:MediaRegistry | ConvertTo-Json | Set-Content $mediaRegistryPath -Encoding UTF8
+    Write-Host "[Debug] $("   " * 1) Media registry written to '$mediaRegistryPath'." -ForegroundColor DarkGreen
 }
 
 # --------------------------------------------------
