@@ -304,17 +304,32 @@ body.dark #da-themeToggle-btn:hover {
    ========================================================= */
 
 .nav-item {
-  padding: 10px;
+  padding: 10px 10px 10px 12px;
   cursor: pointer;
 }
 
-.nav-item[data-level="2"] { padding-left: 12px; }
-.nav-item[data-level="3"] { padding-left: 24px; }
-.nav-item[data-level="4"] { padding-left: 36px; }
-.nav-item[data-level="5"] { padding-left: 48px; }
-.nav-item[data-level="6"] { padding-left: 60px; }
-.nav-item[data-level="7"] { padding-left: 72px; }
-.nav-item[data-level="8"] { padding-left: 84px; }
+/* Level padding — CSS level = build level - 1 */
+.nav-item.nav-level-1 {
+  padding-left: 12px;
+  font-weight: 700;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(0, 0, 0, 0.07);
+  color: #444;
+}
+
+.nav-item.nav-level-2 {
+  padding-left: 24px;
+  background: rgba(0, 0, 0, 0.03);
+  color: #333;
+}
+
+.nav-item.nav-level-3 { padding-left: 36px; }
+.nav-item.nav-level-4 { padding-left: 48px; }
+.nav-item.nav-level-5 { padding-left: 60px; }
+.nav-item.nav-level-6 { padding-left: 72px; }
+.nav-item.nav-level-7 { padding-left: 84px; }
 
 /* Hover state (light mode default) */
 .nav-item:hover,
@@ -323,25 +338,27 @@ body.dark #da-themeToggle-btn:hover {
   font-weight: bold;
 }
 
-.nav-section-header {
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.nav-arrow {
-  font-size: 0.65em;
+/* Arrow only for level-2+ group headers (level-1 is always open) */
+.nav-group > .nav-item:not(.nav-level-1)::before {
+  content: "▶";
+  font-size: 0.6em;
+  margin-right: 6px;
+  display: inline-block;
   transition: transform 0.15s ease;
 }
 
+.nav-group.expanded > .nav-item:not(.nav-level-1)::before {
+  transform: rotate(90deg);
+}
+
+/* Children hidden by default, shown when group is expanded */
 .nav-children {
+  display: none;
   overflow: hidden;
 }
 
-.nav-children .nav-item {
-  padding-left: calc(12px * (var(--level, 1)));
+.nav-group.expanded > .nav-children {
+  display: block;
 }
 
 /* =========================================================

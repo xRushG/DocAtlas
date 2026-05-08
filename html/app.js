@@ -26,6 +26,7 @@ const CONFIG = {
   }
 };
 
+/** Fetches app.json and stores the result in the global APPCONFIG variable. */
 async function loadConfig() {
   const res = await fetch("app.json");
   if (!res.ok) throw new Error("app.json not found");
@@ -54,10 +55,12 @@ function createSlug(text) {
    Theme handling
 -------------------------------------------------- */
 
+/** Returns the currently active theme name, falling back to the configured default. */
 function getTheme() {
   return localStorage.getItem(CONFIG.theme.storageKey) || CONFIG.theme.default;
 }
 
+/** Sets the browser tab title from APPCONFIG, defaulting to "DocAtlas" when unconfigured. */
 function setPageTitle() {
   let pageTitle = APPCONFIG?.page?.title;
 
@@ -68,6 +71,10 @@ function setPageTitle() {
   document.title = pageTitle;
 }
 
+/**
+ * Applies the given theme to the document, persists it in localStorage,
+ * and refreshes the logo and toggle icon to match.
+ */
 function setTheme(theme) {
 
   document.body.classList.remove("light", "dark");
@@ -79,6 +86,7 @@ function setTheme(theme) {
   updateToggleIcon();
 }
 
+/** Updates the theme-toggle button's icon to reflect the current theme. */
 function updateToggleIcon() {
 
   const btn = document.getElementById(CONFIG.dom.themeToggle);
@@ -120,6 +128,10 @@ function loadLogo() {
 }
 
 
+/**
+ * Injects the custom stylesheet configured in APPCONFIG into the document head.
+ * Does nothing when custom styles are disabled or the path is empty.
+ */
 async function loadStyle() {
   if (APPCONFIG.styles.useCustom == false) return;
   
@@ -145,6 +157,10 @@ async function loadStyle() {
    Navigation / Sidebar
 -------------------------------------------------- */
 
+/**
+ * Initialises the sidebar navigation: populates the global pages array from
+ * .nav-item elements, wires up click handlers, and permanently expands top-level groups.
+ */
 function initNav() {
   pages = [];
 
@@ -159,14 +175,6 @@ function initNav() {
     const isLevel1 = el.classList.contains("nav-level-1");
 
     el.onclick = () => {
-      if (group && !isLevel1) {
-        const opening = !group.classList.contains("expanded");
-        if (opening) {
-          document.querySelectorAll(".nav-group.expanded:not(.nav-group:has(> .nav-item.nav-level-1))")
-            .forEach(g => g.classList.remove("expanded"));
-        }
-        group.classList.toggle("expanded");
-      }
       if (el.dataset.href) location.hash = el.dataset.href;
     };
   });
@@ -179,6 +187,29 @@ function initNav() {
   });
 }
 
+/**
+ * Expands the sidebar path to the page identified by slug and collapses all
+ * other non-root groups.
+ */
+function expandNavPath(slug) {
+  // Close all non-level-1 groups
+  document.querySelectorAll(".nav-group:not(:has(> .nav-item.nav-level-1))")
+    .forEach(g => g.classList.remove("expanded"));
+
+  if (!slug) return;
+
+  // Walk up the DOM from the active item and expand every ancestor nav-group
+  const active = document.querySelector(`.nav-item[data-href="${slug}"]`);
+  if (!active) return;
+
+  let el = active.parentElement;
+  while (el && el.id !== "da-navigation-div") {
+    if (el.classList.contains("nav-group")) el.classList.add("expanded");
+    el = el.parentElement;
+  }
+}
+
+/** Loads the table-of-contents page as the application home screen. */
 function loadHomePage() {
   const tocName = APPCONFIG?.tableOfContents?.name ?? "TableOfContent.html";
   loadPage(tocName, false, "");
@@ -189,6 +220,15 @@ function loadHomePage() {
    Markdown page loading
 -------------------------------------------------- */
 
+/**
+ * Fetches a pre-rendered HTML page fragment and inserts it into the content area.
+ * Rewrites relative image paths, applies syntax highlighting, injects copy buttons,
+ * updates the URL hash, and marks the active navigation entry.
+ *
+ * @param {string}  file  - Path to the HTML file relative to htmlSrcFolder.
+ * @param {boolean} push  - Whether to push the slug to the URL hash.
+ * @param {string}  slug  - Navigation slug identifying this page.
+ */
 async function loadPage(file, push = true, slug = null) {
 file = file.replaceAll("\\", "/");
   try {
@@ -205,7 +245,8 @@ file = file.replaceAll("\\", "/");
     const contentDiv = document.getElementById(CONFIG.dom.content);
     contentDiv.innerHTML = html;
 
-    // Relative Bild-URLs auf absoluten basePath umschreiben
+    // Rewrite relative image src values to absolute paths so images load
+    // correctly regardless of the current URL hash.
     contentDiv.querySelectorAll("img").forEach(img => {
       const src = img.getAttribute("src");
       if (src && !src.startsWith("http") && !src.startsWith("/") && !src.startsWith("data:")) {
@@ -225,7 +266,7 @@ file = file.replaceAll("\\", "/");
       pre.parentNode.insertBefore(wrapper, pre);
       wrapper.appendChild(pre);
 
-      // Sprache ermitteln
+      // Determine the language label from the highlight.js class added to the <code> element.
       let language = "text";
 
       block.classList.forEach(cls => {
@@ -261,16 +302,20 @@ file = file.replaceAll("\\", "/");
       location.hash = slug;
     }
 
+    // Only scroll to the top when loading a page, not when jumping to an in-page anchor.
 	if (!location.hash.includes("::")) {
   window.scrollTo(0, 0);
 }
 
-    /* Update active navigation entry */
+    /* Update active navigation entry and expand its tree path */
     document.querySelectorAll(".nav-item")
       .forEach(el => el.classList.remove("active"));
 
-    const active = document.querySelector(`[data-href="${location.hash.substring(1)}"]`);
+    const activeSlug = location.hash.substring(1);
+    const active = document.querySelector(`[data-href="${activeSlug}"]`);
     if (active) active.classList.add("active");
+
+    expandNavPath(activeSlug);
 
     return true;
 
@@ -284,6 +329,10 @@ file = file.replaceAll("\\", "/");
 /* --------------------------------------------------
    Search loading
 -------------------------------------------------- */
+/**
+ * Fetches the pre-built search index JSON and loads it into a MiniSearch instance
+ * configured to search the title and text fields.
+ */
 async function loadSearch() {
 
   const res = await fetch(APPCONFIG.environment.searchIndex);
@@ -299,6 +348,10 @@ async function loadSearch() {
 
 }
 
+/**
+ * Searches the MiniSearch index for the given query string.
+ * Returns an empty array when the index is not yet loaded or the query is too short.
+ */
 function searchDocs(query) {
 
   if (!miniSearch) return [];
@@ -311,6 +364,7 @@ function searchDocs(query) {
 
 }
 
+/** Renders a list of MiniSearch result objects as clickable links in the content area. */
 function renderResults(results) {
 
   const content = document.getElementById(CONFIG.dom.content);
@@ -335,6 +389,10 @@ function renderResults(results) {
    Hash routing
 -------------------------------------------------- */
 
+/**
+ * Responds to URL hash changes by loading the corresponding page.
+ * Supports the slug::anchor format for deep-linking directly to a heading.
+ */
 function handleHashChange() {
 
   const hash = location.hash.substring(1);
@@ -369,10 +427,16 @@ window.addEventListener("hashchange", handleHashChange);
    Initialization
 -------------------------------------------------- */
 
+/** Applies the persisted theme so the correct styles are in place before content loads. */
 function initUI() {
   setTheme(getTheme());
 }
 
+/**
+ * Main entry point after configuration is loaded: loads the logo, builds the
+ * navigation, and either restores the page indicated by the current URL hash
+ * or falls back to the home page.
+ */
 function init() {
   loadLogo();
   initNav();

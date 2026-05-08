@@ -188,6 +188,15 @@ function Get-Title {
 
 
 function Get-CleanMarkdownContent {
+<#
+.SYNOPSIS
+    Strips Markdown syntax from content, returning plain text.
+
+.DESCRIPTION
+    Removes fenced code blocks, inline code, images, links, headings,
+    blockquotes, emphasis markers, HTML tags, and DocAtlas custom directives
+    so that the resulting text can be used for full-text search indexing.
+#>
     param (
         [Parameter(Mandatory)]
         $content
@@ -286,7 +295,19 @@ function Copy-Files {
 #  Tree building and processing
 # --------------------------------------------------
 function Build-Tree {
+<#
+.SYNOPSIS
+    Builds the root node of the documentation tree.
 
+.DESCRIPTION
+    Reads the top-level index file from BasePath, extracts its title and
+    section data, then recursively collects all child pages and folders
+    via Write-Tree. Returns a single root PSCustomObject that represents
+    the entire documentation hierarchy.
+
+.PARAMETER BasePath
+    Absolute path to the root of the Markdown source directory.
+#>
     param(
         [Parameter(Mandatory)]
         [string]$BasePath
@@ -318,6 +339,23 @@ function Build-Tree {
 }
 
 function Write-Tree {
+<#
+.SYNOPSIS
+    Recursively traverses a directory and builds a flat list of page nodes.
+
+.DESCRIPTION
+    Iterates over every entry in BasePath. Directories become group nodes
+    whose slug is derived from their index file title (or folder name when
+    no index file exists). Markdown files become leaf nodes. Each node
+    carries its slug, title, content sections (from Split-MarkdownSections),
+    and optional children. Duplicate slugs cause the build to abort.
+
+.PARAMETER BasePath
+    Directory to scan for Markdown files and sub-folders.
+
+.PARAMETER ParentSlug
+    Slug of the parent node, prepended to child slugs to form full paths.
+#>
     param (
         [Parameter(Mandatory)]
         [string]$BasePath,
@@ -415,6 +453,22 @@ function Write-Tree {
 }
 
 function Get-UniqueAnchor {
+<#
+.SYNOPSIS
+    Returns a deduplicated anchor ID for a heading.
+
+.DESCRIPTION
+    If BaseAnchor has not been seen before it is returned as-is and
+    registered in UsedAnchors. On subsequent calls for the same base value
+    a numeric suffix (-1, -2, …) is appended so that every anchor in a
+    document is unique. The UsedAnchors hashtable is mutated in place.
+
+.PARAMETER BaseAnchor
+    The raw (already-slugified) anchor string derived from a heading.
+
+.PARAMETER UsedAnchors
+    Hashtable that tracks how many times each base anchor has appeared.
+#>
     param(
         [string]$BaseAnchor,
         [hashtable]$UsedAnchors
@@ -431,6 +485,25 @@ function Get-UniqueAnchor {
 }
 
 function Split-MarkdownSections {
+<#
+.SYNOPSIS
+    Splits a Markdown document into per-heading sections.
+
+.DESCRIPTION
+    Walks through the document line by line, tracking code-fence state to
+    avoid treating headings inside code blocks as section delimiters.
+    Each heading starts a new section; the content accumulated since the
+    previous heading is cleaned (via Get-CleanMarkdownContent) and stored.
+    Returns an array of PSCustomObjects with Id, Level, Slug, Anchor, Href,
+    Headline, and Content properties used later for search indexing and
+    navigation.
+
+.PARAMETER Markdown
+    The raw Markdown text of the file.
+
+.PARAMETER Slug
+    The page-level slug that prefixes in-page anchor hrefs.
+#>
     param(
         [Parameter(Mandatory)]
         [string]$Markdown,
@@ -504,6 +577,23 @@ function Split-MarkdownSections {
 }
 
 function Build-Navigation {
+<#
+.SYNOPSIS
+    Converts the page tree into a flat navigation list.
+
+.DESCRIPTION
+    Recursively flattens the tree returned by Build-Tree into an ordered
+    array of navigation entries. Each entry contains the page title, href
+    slug, nesting level, source file path, and a pre-rendered HTML snippet
+    for the sidebar. File paths are made relative to the src directory and
+    backslashes are normalised to forward slashes.
+
+.PARAMETER nodes
+    Array of tree nodes (from Build-Tree / Write-Tree).
+
+.PARAMETER currentLevel
+    Nesting depth of the current call; used to calculate absolute nav levels.
+#>
     param(
         [Parameter(Mandatory)]
         $nodes,
@@ -544,6 +634,23 @@ function Build-Navigation {
 }
 
 function Build-TableOfContents {
+<#
+.SYNOPSIS
+    Generates a Markdown table-of-contents block for a page.
+
+.DESCRIPTION
+    Starting from the entry at StartIndex, collects all subsequent entries
+    whose level is deeper than the anchor entry (up to the configured depth
+    limit) and formats them as an indented Markdown link list prefixed with
+    the ::DA:TOC directive. The result is written back to the index file
+    so it can be processed by the normal Markdown converter.
+
+.PARAMETER Entries
+    The flat navigation list produced by Build-Navigation.
+
+.PARAMETER StartIndex
+    Index of the TableOfContent placeholder entry within Entries.
+#>
     param(
         [array]$Entries,
         [int]$StartIndex
@@ -577,6 +684,19 @@ function Build-TableOfContents {
 }
 
 function Build-SearchIndex {
+<#
+.SYNOPSIS
+    Builds a flat search index from the documentation tree.
+
+.DESCRIPTION
+    Recursively walks the tree and collects one entry per heading section.
+    Leaf page entries carry the cleaned plain-text content of each section;
+    folder group entries carry an empty text field. The resulting array is
+    serialised to JSON and consumed by MiniSearch in the browser.
+
+.PARAMETER nodes
+    Array of tree nodes (from Build-Tree / Write-Tree).
+#>
     param(
         [Parameter(Mandatory)]
         $nodes
@@ -609,7 +729,23 @@ function Build-SearchIndex {
 }
 
 function Publish-MarkdownFiles {
+<#
+.SYNOPSIS
+    Converts Markdown source files to HTML in the build directory.
 
+.DESCRIPTION
+    Mirrors the directory structure from Source into Destination.
+    Each .md file is converted to HTML via Convert-DocAtlasMarkDown;
+    all other files (images, attachments, etc.) are copied as-is.
+    Output files always use the .html extension, even when the source
+    is not a Markdown file.
+
+.PARAMETER Source
+    Root of the Markdown source tree (single file or directory).
+
+.PARAMETER Destination
+    Root of the output directory where HTML files are written.
+#>
     param (
         [string]$Source,
         [string]$Destination
@@ -650,7 +786,25 @@ function Publish-MarkdownFiles {
 
 
 function Convert-DocAtlasMarkDown {
+<#
+.SYNOPSIS
+    Converts a single DocAtlas-flavoured Markdown file to an HTML fragment.
 
+.DESCRIPTION
+    Implements a custom line-by-line Markdown parser that handles headings,
+    fenced code blocks, tables, blockquotes, ordered and unordered lists
+    (including checkboxes and custom markers), DocAtlas info/warning/alert
+    boxes (::da:<type> … ::da:end), inline formatting (bold, italic,
+    strikethrough, links, images), and escape sequences. The output is a
+    bare HTML fragment (no <html>/<body> wrapper) written to OutputFile in
+    UTF-8 encoding.
+
+.PARAMETER InputFile
+    Path to the source .md file.
+
+.PARAMETER OutputFile
+    Path where the resulting .html fragment will be written.
+#>
     param (
         [string]$InputFile,
         [string]$OutputFile
@@ -708,6 +862,7 @@ function Convert-DocAtlasMarkDown {
         '\!' = '!'
     }
 
+    # Escapes the three characters that would break raw text inside HTML.
     function Escape-Html([string]$text) {
         return $text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
     }
@@ -765,6 +920,9 @@ function Convert-DocAtlasMarkDown {
 
     $paragraphBuffer = New-Object System.Collections.Generic.List[string]
 
+    # Applies all inline Markdown transformations to a single line of text:
+    # escaped characters, inline code, links, images, bold/italic/strikethrough, and custom HR variants.
+    # Returns the transformed HTML string.
     function Apply-Inline($rowLine) {
         $line = $rowLine
 
@@ -810,6 +968,8 @@ function Convert-DocAtlasMarkDown {
         return $line
     }
 
+    # Renders a heading as an HTML <hN> element with an id attribute whose value
+    # is guaranteed to match the href produced by Split-MarkdownSections.
     # Uses the same Get-Slug + Get-UniqueAnchor logic as Split-MarkdownSections
     # so that anchor IDs in the HTML always match the href values in the search/nav index.
     function Apply-Heading {
@@ -825,6 +985,8 @@ function Convert-DocAtlasMarkDown {
         return "<h$Level id=`"$anchor`">$innerHtml</h$Level>"
     }
 
+    # Appends a line to the active output target: the box buffer when inside
+    # a ::da: box, or the main output list otherwise.
     function Add-Line {
         param($line)
 
@@ -836,6 +998,8 @@ function Convert-DocAtlasMarkDown {
         }
     }
 
+    # Wraps accumulated paragraph lines in a <p> tag and emits them, then clears
+    # the buffer. HR lines that were collected into the buffer are emitted unwrapped.
     function Flush-Paragraph {
 
         if ($paragraphBuffer.Count -eq 0) { return }
@@ -853,6 +1017,7 @@ function Convert-DocAtlasMarkDown {
         $paragraphBuffer.Clear()
     }
 
+    # Maps a list marker character (-, *, +, ->, etc.) to its CSS class name.
     function Get-ListClass($marker) {
         switch ($marker) {
             '-'  { return "list-dash" }
@@ -869,6 +1034,8 @@ function Convert-DocAtlasMarkDown {
         }
     }
 
+    # Renders the buffered table rows as a complete <table> element and appends
+    # it to the output. Clears all table state afterwards.
     function Flush-Table {
 
         if (-not $inTable -or $tableBuffer.Count -eq 0) { return }
@@ -1382,6 +1549,7 @@ if ($buildConf.debug.enabled) {
 Write-Host "Writing application configuration to JSON..." -ForegroundColor Cyan
 $appConfig = @{}
 
+# Copy every config section except 'debug' -- the browser should never see debug settings.
 foreach ($prop in $buildConf.PSObject.Properties) {
     if ($prop.Name -ne 'debug') {
         $appConfig[$prop.Name] = $prop.Value
@@ -1394,6 +1562,8 @@ if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 2) Debug application configuration complete." -ForegroundColor Gray
 }
 
+# Double backslashes produced by ConvertTo-Json are normalised to forward slashes
+# so that paths in app.json are valid URL components on all platforms.
 ($appConfig | ConvertTo-Json -Depth 5) -replace "\\\\", "/" |
     Set-Content $outAppConfig -Encoding UTF8
 
@@ -1405,6 +1575,27 @@ if ($buildConf.debug.enabled) {
 # Build index.html from template
 # --------------------------------------------------
 function Build-NavGroupedHtml {
+<#
+.SYNOPSIS
+    Renders the flat navigation list as nested HTML for the sidebar.
+
+.DESCRIPTION
+    Walks the flat Items array starting at StartIdx, grouping consecutive
+    items into collapsible nav-group/nav-children div structures whenever a
+    deeper nesting level follows. Returns the generated HTML string and the
+    index of the first item that was not consumed, allowing the caller to
+    continue processing.
+
+.PARAMETER Items
+    The flat navigation list produced by Build-Navigation.
+
+.PARAMETER StartIdx
+    Index into Items at which to begin rendering.
+
+.PARAMETER MinLevel
+    Minimum nav level that belongs to the current nesting context; items
+    shallower than this level cause the recursion to stop.
+#>
     param([array]$Items, [int]$StartIdx, [int]$MinLevel)
 
     $sb  = [System.Text.StringBuilder]::new()
