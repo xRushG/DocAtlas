@@ -779,10 +779,15 @@ function Build-SearchIndex {
         if ($n.content) {
 
             foreach ($c in $n.Content) {
+                $rawSnippet = ($c.Content -replace '\s+', ' ').Trim()
+                $snippet    = if ($rawSnippet.Length -gt 220) { $rawSnippet.Substring(0, 220) + '…' } else { $rawSnippet }
+
                 $result += [PSCustomObject]@{
-                    title = $c.Headline
-                    href  = $c.Href
-                    text  = $c.Content
+                    title     = $c.Headline
+                    href      = $c.Href
+                    text      = $c.Content
+                    pageTitle = $n.title
+                    snippet   = $snippet
                 }
             }
         }

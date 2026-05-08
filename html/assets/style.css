@@ -194,6 +194,7 @@ body.dark #da-themeToggle-btn:hover {
 
   padding: 10px;
   box-sizing: border-box;
+  z-index: 100;
 }
 
 #da-searchBox-div {
@@ -362,6 +363,165 @@ body.dark #da-themeToggle-btn:hover {
 .nav-group.expanded > .nav-children {
   display: block;
 }
+
+/* =========================================================
+   SEARCH PANEL + FLAG
+   ========================================================= */
+
+#da-search-panel {
+  position: fixed;
+  top: 0;
+  left: clamp(260px, 22vw, 420px);
+  width: calc(100% - clamp(260px, 22vw, 420px));
+  height: 100%;
+  background: #fff;
+  overflow-y: auto;
+  padding: 30px;
+  box-sizing: border-box;
+  z-index: 50;
+
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-102%);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0.32s;
+}
+
+#da-search-panel.visible {
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0s;
+}
+
+body.dark #da-search-panel {
+  background: #1e1e1e;
+}
+
+#da-search-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  color: #888;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+#da-search-close:hover { color: #333; }
+body.dark #da-search-close:hover { color: #eee; }
+
+/* Flag button — peeks out at the sidebar edge after closing the panel */
+#da-search-flag {
+  position: fixed;
+  left: calc(clamp(260px, 22vw, 420px) - 1px);
+  top: 88px;
+  width: 26px;
+  height: 52px;
+  border-radius: 0 6px 6px 0;
+  background: #888;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 49;
+
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+#da-search-flag.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+#da-search-flag:hover { background: #555; }
+
+/* =========================================================
+   SEARCH RESULTS
+   ========================================================= */
+
+.search-count {
+  font-size: 0.55em;
+  font-weight: normal;
+  background: #888;
+  color: #fff;
+  border-radius: 10px;
+  padding: 2px 9px;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+
+.search-empty {
+  color: #888;
+  font-style: italic;
+}
+
+.search-result {
+  border-left: 3px solid #ccc;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  transition: border-color 0.15s;
+}
+
+.search-result:hover {
+  border-color: #888;
+}
+
+.search-result-page a {
+  font-size: 0.78em;
+  color: #888;
+  text-decoration: none;
+}
+
+.search-result-page a:hover {
+  text-decoration: underline;
+}
+
+.search-result-section {
+  margin: 3px 0 0;
+  font-weight: 600;
+}
+
+.search-result-section a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.search-result-section a:hover {
+  text-decoration: underline;
+}
+
+.search-result-snippet {
+  margin-top: 5px;
+  font-size: 0.82em;
+  color: #666;
+  line-height: 1.5;
+}
+
+.search-result-snippet mark {
+  background: #fff176;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Dark mode adjustments */
+body.dark .search-result       { border-color: #555; }
+body.dark .search-result:hover { border-color: #aaa; }
+body.dark .search-result-page a   { color: #aaa; }
+body.dark .search-result-snippet  { color: #bbb; }
+body.dark .search-result-snippet mark { background: #b5a200; }
 
 /* =========================================================
    MAIN CONTENT AREA

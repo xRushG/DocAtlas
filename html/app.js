@@ -1,6 +1,8 @@
 let pages = [];
 let APPCONFIG;
 let miniSearch;
+let lastQuery   = '';
+let lastResults = [];
 
 /*
   Global configuration.
@@ -340,7 +342,7 @@ async function loadSearch() {
 
   miniSearch = new MiniSearch({
     fields: ['title', 'text'],
-    storeFields: ['title', 'href'],
+    storeFields: ['title', 'href', 'pageTitle', 'snippet'],
     idField: 'href'
   });
 
@@ -364,25 +366,82 @@ function searchDocs(query) {
 
 }
 
-/** Renders a list of MiniSearch result objects as clickable links in the content area. */
-function renderResults(results) {
+/** Escapes HTML special characters to prevent XSS in dynamically built markup. */
+function escapeHtml(text) {
+  return (text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-  const content = document.getElementById(CONFIG.dom.content);
+/**
+ * Wraps each query word found in text with a <mark> tag.
+ * Input text must already be HTML-escaped.
+ */
+function highlightQuery(text, query) {
+  if (!text || !query) return text;
+  const words = query.trim().split(/\s+/).filter(w => w.length > 1);
+  let result = text;
+  words.forEach(word => {
+    const safe  = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(`(${safe})`, 'gi'), '<mark>$1</mark>');
+  });
+  return result;
+}
 
-  let html = "<h1>Search Results</h1>";
+/** Slides the search panel into view and hides the flag button. */
+function showSearchPanel() {
+  document.getElementById('da-search-panel').classList.add('visible');
+  document.getElementById('da-search-flag').classList.remove('visible');
+}
+
+/**
+ * Slides the search panel out of view.
+ * Shows the flag button afterwards if a query is still stored.
+ */
+function hideSearchPanel() {
+  document.getElementById('da-search-panel').classList.remove('visible');
+  if (lastQuery) {
+    document.getElementById('da-search-flag').classList.add('visible');
+  }
+}
+
+/**
+ * Renders search results into the search panel and makes the panel visible.
+ * Each result shows the page title, the matching section heading, and a highlighted snippet.
+ */
+function renderResults(results, query = '') {
+
+  const inner = document.getElementById('da-search-panel-inner');
+
+  let html = `<h1>Search Results <span class="search-count">${results.length}</span></h1>`;
+
+  if (results.length === 0) {
+    html += `<p class="search-empty">No results found.</p>`;
+  }
 
   results.forEach(r => {
+    const pageHref     = r.href.split('::')[0];
+    const isSubsection = r.href.includes('::');
+    const pageTitle    = escapeHtml(r.pageTitle || '');
+    const sectionTitle = escapeHtml(r.title || '');
+    const snippet      = highlightQuery(escapeHtml(r.snippet || ''), query);
+
+    // Only show section heading separately when it differs from the page title
+    const sectionHtml = (isSubsection && sectionTitle !== pageTitle) ? `
+        <div class="search-result-section">
+          <a href="#${r.href}">${sectionTitle}</a>
+        </div>` : '';
 
     html += `
       <div class="search-result">
-        <a href="#${r.href}">
-          <strong>${r.title}</strong>
-        </a>
-      </div>
-    `;
+        <div class="search-result-page">
+          <a href="#${pageHref}">${pageTitle}</a>
+        </div>
+        ${sectionHtml}
+        ${snippet ? `<div class="search-result-snippet">${snippet}</div>` : ''}
+      </div>`;
   });
 
-  content.innerHTML = html;
+  inner.innerHTML = html;
+  showSearchPanel();
 }
 
 /* --------------------------------------------------
@@ -394,6 +453,8 @@ function renderResults(results) {
  * Supports the slug::anchor format for deep-linking directly to a heading.
  */
 function handleHashChange() {
+
+  hideSearchPanel();
 
   const hash = location.hash.substring(1);
   //if (!hash) return;
@@ -464,10 +525,26 @@ function init() {
 
 document.getElementById(CONFIG.dom.searchBox).addEventListener("input", e => {
 
-  const results = searchDocs(e.target.value);
+  const query = e.target.value;
+  lastQuery   = query;
 
-  renderResults(results);
+  if (query.length >= 2) {
+    lastResults = searchDocs(query);
+    renderResults(lastResults, query);
+  } else {
+    hideSearchPanel();
+  }
 
+});
+
+document.getElementById('da-search-close').onclick = () => hideSearchPanel();
+
+document.getElementById('da-search-flag').onclick = () => {
+  renderResults(lastResults, lastQuery);
+};
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') hideSearchPanel();
 });
 
 document.getElementById(CONFIG.dom.homeButton).onclick = () => {
