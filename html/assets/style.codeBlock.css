@@ -1,0 +1,93 @@
+/* ================================
+   CODE BLOCKS (DARK MODE)
+================================ */
+body.dark .code-language {
+  color: var(--md-fg);
+  opacity: 0.75;
+}
+
+body.dark .code-block pre {
+  background: color-mix(in srgb, var(--md-bg) 85%, black);
+  border: 1px solid var(--md-border);
+}
+
+body.dark .code-block code {
+  background: transparent;
+  color: var(--md-fg);
+}
+
+body.dark .copy-button {
+  background: color-mix(in srgb, var(--md-bg) 90%, white 5%);
+  border: 1px solid var(--md-border);
+  color: var(--md-fg);
+}
+
+body.dark .copy-button:hover {
+  background: color-mix(in srgb, var(--md-bg) 75%, white 10%);
+}
+/* ================================
+   CODE BLOCKS
+================================ */
+.code-block {
+  position: relative;
+  margin: 1em 0;
+
+  border-radius: var(--md-box-radius);
+  border: 1px solid var(--md-border);
+  border-left: 4px solid var(--md-color-codebox);
+
+  background: color-mix(in srgb, var(--md-color-codebox) 12%, transparent);
+
+  box-shadow: var(--md-shadow);
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 2.2rem 1rem 1rem 1rem;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.06);
+  background: transparent;
+  border: none;
+  overflow-x: auto;
+}
+
+.code-block code {
+  font-family: Consolas, monospace;
+  font-size: 13px;
+
+  background: none;
+  padding: 0;
+}
+
+.code-language {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+
+/* Copy button */
+.copy-button {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+
+  font-size: 11px;
+  padding: 3px 8px;
+
+  border-radius: 6px;
+  border: 1px solid var(--md-border);
+
+  background: var(--md-bg);
+  color: var(--md-fg);
+
+  cursor: pointer;
+}
+
+.copy-button:hover {
+  background: rgba(0,0,0,0.05);
+}

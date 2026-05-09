@@ -1,0 +1,66 @@
+/* ========================================================= */
+/* Blockquote System (L1–L6 + Dark Mode)                    */
+/* ========================================================= */
+
+
+
+/* ========================================================= */
+/* Base Blockquote                                           */
+/* ========================================================= */
+#da-content-div blockquote {
+    margin: 0.5em 0;
+    padding: 0.6em 1em;
+    border-left: 4px solid rgba(202,202,202,0.6);
+    border-radius: 6px;
+}
+
+/* Paragraph spacing */
+#da-content-div blockquote p {
+    margin: 0.5em 0;
+}
+
+/* ========================================================= */
+/* Visual scaling per depth                                  */
+/* ========================================================= */
+
+#da-content-div blockquote {
+	margin: 0.5em 0;
+    padding: 0.6em 1em;
+	--bq-level: 1;
+	--indent: 0em;
+}
+
+#da-content-div blockquote blockquote {
+	margin-top: 0.4em;
+	--bq-level: 2;
+    --indent: 0.5em;
+}
+
+#da-content-div blockquote blockquote blockquote {
+    margin-top: 0.4em;
+	--bq-level: 3;
+	--indent: 1em;
+}
+
+#da-content-div blockquote blockquote blockquote blockquote {
+    margin-top: 0.4em;
+	--bq-level: 4;
+	--indent: 1.5em;
+}
+
+#da-content-div blockquote blockquote blockquote blockquote blockquote {
+    margin-top: 0.4em;
+	--bq-level: 5;
+	--indent: 2em;
+}
+
+#da-content-div blockquote blockquote blockquote blockquote blockquote blockquote {
+    margin-top: 0.4em;
+	--bq-level: 6;
+	--indent: 2.5em;
+}
+
+/* apply indentation */
+#da-content-div blockquote {
+    margin-left: var(--indent);
+}

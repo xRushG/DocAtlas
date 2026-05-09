@@ -1,0 +1,171 @@
+/* ================================
+   BASE BOX (CALLOUT)
+================================ */
+:root {
+  --md-bg: #ffffff;
+  --md-fg: #1f2328;
+  --md-border: #d0d7de;
+
+  --md-font-size: 0.95rem;
+  --md-line-height: 1.5;
+
+  --md-box-padding: 0.75rem 1rem;
+  --md-box-radius: 8px;
+  --md-box-gap: 0.6rem;
+
+  --md-shadow: 0 1px 2px rgba(0,0,0,0.05);
+
+  /* semantic colors */
+  --md-color-alert: #d1242f;
+  --md-color-important: #8250df;
+  --md-color-warning: #9a6700;
+  --md-color-question: #0969da;
+  --md-color-tip: #1a7f37;
+  --md-color-info: #0969da;
+  --md-color-danger: #b62324;
+  --md-color-success: #1a7f37;
+  --md-color-note: #57606a;
+  --md-color-example: #8250df;
+
+  --md-alpha-bg: 0.10;
+  --md-alpha-border: 0.35;
+}
+
+/* ================================
+   BASE BOX (DARK MODE OVERRIDES)
+================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-bg: #0d1117;
+    --md-fg: #c9d1d9;
+    --md-border: #30363d;
+
+    --md-shadow: none;
+
+    --md-color-alert: #ff6b6b;
+    --md-color-important: #a371f7;
+    --md-color-warning: #d29922;
+    --md-color-question: #58a6ff;
+    --md-color-tip: #3fb950;
+    --md-color-info: #58a6ff;
+    --md-color-danger: #ff7b72;
+    --md-color-success: #3fb950;
+    --md-color-note: #8b949e;
+    --md-color-example: #a371f7;
+  }
+}
+
+body {
+  --md-color-codebox: #888888;
+}
+body.dark {
+  --md-color-codebox: #888888;
+}
+/* ================================
+   BASE BOX
+================================ */
+.md-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--md-box-gap);
+
+  padding: var(--md-box-padding);
+  border-radius: var(--md-box-radius);
+
+  font-size: var(--md-font-size);
+  line-height: var(--md-line-height);
+
+  background: var(--md-box-bg);
+  border: 1px solid var(--md-box-border);
+  border-left: 4px solid var(--md-box-accent);
+
+  box-shadow: var(--md-shadow);
+  
+  margin: 25px 0;
+}
+
+/* ---------- TITLE ---------- */
+.md-box-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+/* ---------- CONTENT ---------- */
+.md-box > div {
+  flex: 1;
+}
+
+/* ---------- INLINE ELEMENTS ---------- */
+.md-box code {
+  font-size: 0.9em;
+  padding: 0.15em 0.3em;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  .md-box code {
+    background: rgba(255,255,255,0.08);
+  }
+}
+
+/* ---------- COLOR SYSTEM ---------- */
+.md-alert-box {
+  --md-box-accent: var(--md-color-alert);
+  --md-box-bg: color-mix(in srgb, var(--md-color-alert) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-alert) var(--md-alpha-border), transparent);
+}
+
+.md-important-box {
+  --md-box-accent: var(--md-color-important);
+  --md-box-bg: color-mix(in srgb, var(--md-color-important) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-important) var(--md-alpha-border), transparent);
+}
+
+.md-warning-box {
+  --md-box-accent: var(--md-color-warning);
+  --md-box-bg: color-mix(in srgb, var(--md-color-warning) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-warning) var(--md-alpha-border), transparent);
+}
+
+.md-question-box {
+  --md-box-accent: var(--md-color-question);
+  --md-box-bg: color-mix(in srgb, var(--md-color-question) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-question) var(--md-alpha-border), transparent);
+}
+
+.md-tip-box {
+  --md-box-accent: var(--md-color-tip);
+  --md-box-bg: color-mix(in srgb, var(--md-color-tip) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-tip) var(--md-alpha-border), transparent);
+}
+
+.md-info-box {
+  --md-box-accent: var(--md-color-info);
+  --md-box-bg: color-mix(in srgb, var(--md-color-info) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-info) var(--md-alpha-border), transparent);
+}
+
+.md-danger-box {
+  --md-box-accent: var(--md-color-danger);
+  --md-box-bg: color-mix(in srgb, var(--md-color-danger) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-danger) var(--md-alpha-border), transparent);
+}
+
+.md-success-box {
+  --md-box-accent: var(--md-color-success);
+  --md-box-bg: color-mix(in srgb, var(--md-color-success) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-success) var(--md-alpha-border), transparent);
+}
+
+.md-note-box {
+  --md-box-accent: var(--md-color-note);
+  --md-box-bg: color-mix(in srgb, var(--md-color-note) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-note) var(--md-alpha-border), transparent);
+}
+
+.md-example-box {
+  --md-box-accent: var(--md-color-example);
+  --md-box-bg: color-mix(in srgb, var(--md-color-example) var(--md-alpha-bg), transparent);
+  --md-box-border: color-mix(in srgb, var(--md-color-example) var(--md-alpha-border), transparent);
+}

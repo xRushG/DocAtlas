@@ -1,0 +1,99 @@
+/* ========================================================= */
+/* HR Styles (Light + Dark Mode)                    */
+/* ========================================================= */
+
+/* ---------- Theme Variables ---------- */
+:root {
+    /* Base line color */
+    --hr-color: rgba(120, 120, 120, 0.7);
+
+    /* Softer variant for gradients */
+    --hr-color-soft: rgba(120, 120, 120, 0.4);
+
+    /* Background used behind symbols */
+    --hr-bg: #ffffff;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --hr-color: rgba(200, 200, 200, 0.7);
+        --hr-color-soft: rgba(200, 200, 200, 0.35);
+        --hr-bg: #1e1e1e;
+    }
+	#da-content-div hr.hr-symbol::after {
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.12),
+                    0 2px 6px rgba(0,0,0,0.4);
+    }
+}
+
+/* ---------- Base HR Reset ---------- */
+#da-content-div hr {
+    border: none;
+    margin: 3rem 0;
+    position: relative;
+}
+
+/* ---------------------------------- */
+/* Thin solid line (minimalistic)     */
+/* ---------------------------------- */
+#da-content-div hr.hr-thin {
+    height: 1px;
+    background: linear-gradient(
+        to right,
+        transparent,
+        var(--hr-color),
+        transparent
+    );
+}
+
+/* ---------------------------------- */
+/* Dashed line (modern, subtle)       */
+/* ---------------------------------- */
+#da-content-div hr.hr-dashed {
+    height: 2px;
+    background: repeating-linear-gradient(
+        to right,
+        var(--hr-color) 0 8px,
+        transparent 8px 16px
+    );
+}
+
+/* ---------------------------------- */
+/* Dotted line (soft dots)            */
+/* ---------------------------------- */
+#da-content-div hr.hr-dotted {
+    height: 6px;
+    background: radial-gradient(circle, var(--hr-color) 2px, transparent 3px);
+    background-size: 12px 6px;
+    background-repeat: repeat-x;
+}
+
+/* ---------------------------------- */
+/* Symbol divider (centered element)  */
+/* ---------------------------------- */
+#da-content-div hr.hr-symbol {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    #c0c0c0,
+    transparent
+  );
+  margin: 2rem 0;
+  position: relative;
+}
+
+#da-content-div hr.hr-symbol::after {
+  content: "§";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  color: #888;
+  padding: 0 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1;
+}

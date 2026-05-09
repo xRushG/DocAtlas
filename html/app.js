@@ -1,6 +1,8 @@
 let pages = [];
 let APPCONFIG;
 let miniSearch;
+let lastQuery   = '';
+let lastResults = [];
 
 /*
   Global configuration.
@@ -12,7 +14,6 @@ const CONFIG = {
     logo: "da-logo-div",
     homeButton: "da-home-btn",
     searchBox: "da-searchBox-ipt",
-    navigation: "da-navigation-div",
     themeToggle: "da-themeToggle-btn",
     content: "da-content-div"
   },
@@ -27,6 +28,7 @@ const CONFIG = {
   }
 };
 
+/** Fetches app.json and stores the result in the global APPCONFIG variable. */
 async function loadConfig() {
   const res = await fetch("app.json");
   if (!res.ok) throw new Error("app.json not found");
@@ -49,20 +51,18 @@ function createSlug(text) {
     .replace(/\s+/g, "-");
 }
 
-/* Lookup page by slug inside the flat page index */
-function findPageBySlug(slug) {
-  return pages.find(p => p.slug === slug);
-}
 
 
 /* --------------------------------------------------
    Theme handling
 -------------------------------------------------- */
 
+/** Returns the currently active theme name, falling back to the configured default. */
 function getTheme() {
   return localStorage.getItem(CONFIG.theme.storageKey) || CONFIG.theme.default;
 }
 
+/** Sets the browser tab title from APPCONFIG, defaulting to "DocAtlas" when unconfigured. */
 function setPageTitle() {
   let pageTitle = APPCONFIG?.page?.title;
 
@@ -73,6 +73,10 @@ function setPageTitle() {
   document.title = pageTitle;
 }
 
+/**
+ * Applies the given theme to the document, persists it in localStorage,
+ * and refreshes the logo and toggle icon to match.
+ */
 function setTheme(theme) {
 
   document.body.classList.remove("light", "dark");
@@ -84,6 +88,7 @@ function setTheme(theme) {
   updateToggleIcon();
 }
 
+/** Updates the theme-toggle button's icon to reflect the current theme. */
 function updateToggleIcon() {
 
   const btn = document.getElementById(CONFIG.dom.themeToggle);
@@ -102,7 +107,7 @@ function updateToggleIcon() {
 function loadLogo() {
 
   const logoDiv = document.getElementById(CONFIG.dom.logo);
-
+  if (!logoDiv) return;
   if (!APPCONFIG.logo?.enabled) {
     console.warn("[Config] Logo disabled.");
     logoDiv.style.display = "none";
@@ -125,10 +130,14 @@ function loadLogo() {
 }
 
 
+/**
+ * Injects the custom stylesheet configured in APPCONFIG into the document head.
+ * Does nothing when custom styles are disabled or the path is empty.
+ */
 async function loadStyle() {
-  if (APPCONFIG.styles.useCustom == false)  return;
+  if (APPCONFIG.styles.useCustom == false) return;
   
-  if (APPCONFIG.styles.path == null || APPCONFIG.styles.path.trim() === "") {
+  if (!APPCONFIG.styles?.path || APPCONFIG.styles.path.trim() === "") {
     console.warn("Custom stylesheet path is empty. Using default stylesheet.");
     return;
   }
@@ -138,7 +147,6 @@ async function loadStyle() {
   link.rel = "stylesheet";
   link.href = custom;
 
-  // verhindert nur JS-seitige Eskalation
   link.onerror = () => {
     console.warn("[Config] Custom stylesheet not found:", custom);
   };
@@ -151,57 +159,62 @@ async function loadStyle() {
    Navigation / Sidebar
 -------------------------------------------------- */
 
-async function loadMenu() {
+/**
+ * Initialises the sidebar navigation: populates the global pages array from
+ * .nav-item elements, wires up click handlers, and permanently expands top-level groups.
+ */
+function initNav() {
+  pages = [];
 
-  try {
+  document.querySelectorAll(".nav-item").forEach(el => {
+    pages.push({
+      title: el.textContent.trim(),
+      slug:  el.dataset.href,
+      file:  el.dataset.file
+    });
 
-    const res = await fetch(APPCONFIG.environment.navigationIndex);
-    if (!res.ok) throw new Error(APPCONFIG.environment.navigationIndex + " not found");
+    const group = el.parentElement?.classList.contains("nav-group") ? el.parentElement : null;
+    const isLevel1 = el.classList.contains("nav-level-1");
 
-    const data = await res.json();
+    el.onclick = () => {
+      if (el.dataset.href) location.hash = el.dataset.href;
+    };
+  });
 
-    const nav = document.getElementById("da-navigation-div");
-    nav.innerHTML = "";
+  // Level-1 groups always expanded and non-collapsible
+  document.querySelectorAll(".nav-group").forEach(group => {
+    if (group.querySelector(":scope > .nav-item.nav-level-1")) {
+      group.classList.add("expanded");
+    }
+  });
+}
 
-    pages = [];
-    data.forEach(node => addPages(node));
-    renderNav(data);
+/**
+ * Expands the sidebar path to the page identified by slug and collapses all
+ * other non-root groups.
+ */
+function expandNavPath(slug) {
+  // Close all non-level-1 groups
+  document.querySelectorAll(".nav-group:not(:has(> .nav-item.nav-level-1))")
+    .forEach(g => g.classList.remove("expanded"));
 
-	/* Initial page load when no hash exists */
-	if (!location.hash && pages.length > 0) {
-    location.hash = pages[0].slug;
-	}
+  if (!slug) return;
 
-  } catch (err) {
+  // Walk up the DOM from the active item and expand every ancestor nav-group
+  const active = document.querySelector(`.nav-item[data-href="${slug}"]`);
+  if (!active) return;
 
-    console.error(err);
-
-    document.getElementById(CONFIG.dom.content).textContent =
-      "Failed to load navigation.";
-
+  let el = active.parentElement;
+  while (el && el.id !== "da-navigation-div") {
+    if (el.classList.contains("nav-group")) el.classList.add("expanded");
+    el = el.parentElement;
   }
 }
 
-function renderNav(nodes) {
-  nodes.forEach(node => {
-    if (node.level < 2) return;
-    if (node.level > APPCONFIG.navigation.depth +1) return;
-
-    const el = document.createElement("div");
-  
-    el.className = "nav-item";
-    el.textContent = node.title;
-    el.dataset.href = node.href;
-    el.dataset.level = node.level;
-
-    el.onclick = () => {
-      location.hash = node.href;
-    };
-
-    document.getElementById(CONFIG.dom.navigation).appendChild(el);
-
-    pages.push(node);
-  });
+/** Loads the table-of-contents page as the application home screen. */
+function loadHomePage() {
+  const tocName = APPCONFIG?.tableOfContents?.name ?? "TableOfContent.html";
+  loadPage(tocName, false, "");
 }
 
 
@@ -209,53 +222,39 @@ function renderNav(nodes) {
    Markdown page loading
 -------------------------------------------------- */
 
+/**
+ * Fetches a pre-rendered HTML page fragment and inserts it into the content area.
+ * Rewrites relative image paths, applies syntax highlighting, injects copy buttons,
+ * updates the URL hash, and marks the active navigation entry.
+ *
+ * @param {string}  file  - Path to the HTML file relative to htmlSrcFolder.
+ * @param {boolean} push  - Whether to push the slug to the URL hash.
+ * @param {string}  slug  - Navigation slug identifying this page.
+ */
 async function loadPage(file, push = true, slug = null) {
 file = file.replaceAll("\\", "/");
   try {
 	
-    const res = await fetch(APPCONFIG.environment.markdownFolder + file);
-    if (!res.ok) throw new Error("Page not found");
+    const htmlFile = file.replace(/\.md$/, ".html");
+    const res = await fetch(APPCONFIG.environment.htmlSrcFolder + htmlFile);
 
-    const md = await res.text();
+    const html = await res.text();
 
 	const basePath =
-      APPCONFIG.environment.markdownFolder +
+      APPCONFIG.environment.htmlSrcFolder +
       file.substring(0, file.lastIndexOf("/") + 1);
 
-    /* Fix relative image paths inside markdown */
-    const fixedMd = md.replace(
-      /!\[(.*?)\]\((.*?)\)/g,
-      (match, alt, src) => {
+    const contentDiv = document.getElementById(CONFIG.dom.content);
+    contentDiv.innerHTML = html;
 
-        if (src.startsWith("http") || src.startsWith("/")) {
-          return match;
-        }
-
-        return `![${alt}](${encodeURI(basePath + src)})`;
+    // Rewrite relative image src values to absolute paths so images load
+    // correctly regardless of the current URL hash.
+    contentDiv.querySelectorAll("img").forEach(img => {
+      const src = img.getAttribute("src");
+      if (src && !src.startsWith("http") && !src.startsWith("/") && !src.startsWith("data:")) {
+        img.src = basePath + src;
       }
-    );
-
-	const renderer = new marked.Renderer();
-
-    /*
-      Build hierarchical heading IDs:
-      H1 -> section
-      H2 -> section/subsection
-      H3 -> section/subsection/topic
-    */
-    let headingStack = [];
-
-    renderer.heading = function (token) {
-
-  const raw = token.text;
-  const clean = raw.replace(/<[^>]+>/g, "");
-  const slug = createSlug(clean);
-
-  return `<h${token.depth} id="${slug}">${raw}</h${token.depth}>`;
-};
-
-    document.getElementById(CONFIG.dom.content).innerHTML =
-      marked.parse(fixedMd, { renderer });
+    });
 
     document.querySelectorAll(`#${CONFIG.dom.content} pre code`).forEach((block) => {
 
@@ -269,7 +268,7 @@ file = file.replaceAll("\\", "/");
       pre.parentNode.insertBefore(wrapper, pre);
       wrapper.appendChild(pre);
 
-      // Sprache ermitteln
+      // Determine the language label from the highlight.js class added to the <code> element.
       let language = "text";
 
       block.classList.forEach(cls => {
@@ -305,16 +304,20 @@ file = file.replaceAll("\\", "/");
       location.hash = slug;
     }
 
+    // Only scroll to the top when loading a page, not when jumping to an in-page anchor.
 	if (!location.hash.includes("::")) {
   window.scrollTo(0, 0);
 }
 
-    /* Update active navigation entry */
+    /* Update active navigation entry and expand its tree path */
     document.querySelectorAll(".nav-item")
       .forEach(el => el.classList.remove("active"));
 
-    const active = document.querySelector(`[data-href="${location.hash.substring(1)}"]`);
+    const activeSlug = location.hash.substring(1);
+    const active = document.querySelector(`[data-href="${activeSlug}"]`);
     if (active) active.classList.add("active");
+
+    expandNavPath(activeSlug);
 
     return true;
 
@@ -325,26 +328,13 @@ file = file.replaceAll("\\", "/");
   }
 }
 
-function addPages(node) {
-
-  pages.push({
-    title: node.title,
-    file: node.file,
-    slug: node.href
-  });
-
-  if (!node.children) return;
-
-   if (node.children && !Array.isArray(node.children)) {
-    node.children = [node.children];
-  }
-
-  node.children.forEach(child => addPages(child));
-}
-
 /* --------------------------------------------------
    Search loading
 -------------------------------------------------- */
+/**
+ * Fetches the pre-built search index JSON and loads it into a MiniSearch instance
+ * configured to search the title and text fields.
+ */
 async function loadSearch() {
 
   const res = await fetch(APPCONFIG.environment.searchIndex);
@@ -352,7 +342,7 @@ async function loadSearch() {
 
   miniSearch = new MiniSearch({
     fields: ['title', 'text'],
-    storeFields: ['title', 'href'],
+    storeFields: ['title', 'href', 'pageTitle', 'snippet'],
     idField: 'href'
   });
 
@@ -360,8 +350,13 @@ async function loadSearch() {
 
 }
 
+/**
+ * Searches the MiniSearch index for the given query string.
+ * Returns an empty array when the index is not yet loaded or the query is too short.
+ */
 function searchDocs(query) {
 
+  if (!miniSearch) return [];
   if (!query || query.length < 2) return [];
 
   return miniSearch.search(query, {
@@ -371,30 +366,95 @@ function searchDocs(query) {
 
 }
 
-function renderResults(results) {
+/** Escapes HTML special characters to prevent XSS in dynamically built markup. */
+function escapeHtml(text) {
+  return (text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-  const content = document.getElementById(CONFIG.dom.content);
+/**
+ * Wraps each query word found in text with a <mark> tag.
+ * Input text must already be HTML-escaped.
+ */
+function highlightQuery(text, query) {
+  if (!text || !query) return text;
+  const words = query.trim().split(/\s+/).filter(w => w.length > 1);
+  let result = text;
+  words.forEach(word => {
+    const safe  = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(`(${safe})`, 'gi'), '<mark>$1</mark>');
+  });
+  return result;
+}
 
-  let html = "<h1>Search Results</h1>";
+/** Slides the search panel into view and hides the flag button. */
+function showSearchPanel() {
+  document.getElementById('da-search-panel').classList.add('visible');
+  document.getElementById('da-search-flag').classList.remove('visible');
+}
+
+/**
+ * Slides the search panel out of view.
+ * Shows the flag button afterwards if a query is still stored.
+ */
+function hideSearchPanel() {
+  document.getElementById('da-search-panel').classList.remove('visible');
+  if (lastQuery) {
+    document.getElementById('da-search-flag').classList.add('visible');
+  }
+}
+
+/**
+ * Renders search results into the search panel and makes the panel visible.
+ * Each result shows the page title, the matching section heading, and a highlighted snippet.
+ */
+function renderResults(results, query = '') {
+
+  const inner = document.getElementById('da-search-panel-inner');
+
+  let html = `<h1>Search Results <span class="search-count">${results.length}</span></h1>`;
+
+  if (results.length === 0) {
+    html += `<p class="search-empty">No results found.</p>`;
+  }
 
   results.forEach(r => {
+    const pageHref     = r.href.split('::')[0];
+    const isSubsection = r.href.includes('::');
+    const pageTitle    = escapeHtml(r.pageTitle || '');
+    const sectionTitle = escapeHtml(r.title || '');
+    const snippet      = highlightQuery(escapeHtml(r.snippet || ''), query);
+
+    // Only show section heading separately when it differs from the page title
+    const sectionHtml = (isSubsection && sectionTitle !== pageTitle) ? `
+        <div class="search-result-section">
+          <a href="#${r.href}">${sectionTitle}</a>
+        </div>` : '';
 
     html += `
       <div class="search-result">
-        <a href="#${r.href}">
-          <strong>${r.title}</strong>
-        </a>
-      </div>
-    `;
+        <div class="search-result-page">
+          <a href="#${pageHref}">${pageTitle}</a>
+        </div>
+        ${sectionHtml}
+        ${snippet ? `<div class="search-result-snippet">${snippet}</div>` : ''}
+      </div>`;
   });
 
-  content.innerHTML = html;
+  inner.innerHTML = html;
+  showSearchPanel();
 }
+
 /* --------------------------------------------------
    Hash routing
 -------------------------------------------------- */
 
+/**
+ * Responds to URL hash changes by loading the corresponding page.
+ * Supports the slug::anchor format for deep-linking directly to a heading.
+ */
 function handleHashChange() {
+
+  hideSearchPanel();
 
   const hash = location.hash.substring(1);
   //if (!hash) return;
@@ -425,35 +485,33 @@ function handleHashChange() {
 window.addEventListener("hashchange", handleHashChange);
 
 /* --------------------------------------------------
-   Higlighting
--------------------------------------------------- */
-
-
-/* --------------------------------------------------
    Initialization
 -------------------------------------------------- */
 
+/** Applies the persisted theme so the correct styles are in place before content loads. */
 function initUI() {
   setTheme(getTheme());
 }
 
+/**
+ * Main entry point after configuration is loaded: loads the logo, builds the
+ * navigation, and either restores the page indicated by the current URL hash
+ * or falls back to the home page.
+ */
 function init() {
-
   loadLogo();
-
-  loadMenu().then(() => {
-    if (location.hash) {
-      handleHashChange();
-    }
-  });
+  initNav();
+  if (location.hash) {
+    handleHashChange();
+  } else {
+    loadHomePage();
+  }
 }
 
 
 /* --------------------------------------------------
    Event bindings
 -------------------------------------------------- */
-
-document.getElementById(CONFIG.dom.themeToggle).onclick = () => {
 
   const toggle = document.getElementById(CONFIG.dom.themeToggle);
 
@@ -465,18 +523,33 @@ document.getElementById(CONFIG.dom.themeToggle).onclick = () => {
     };
   }
 
-};
-
 document.getElementById(CONFIG.dom.searchBox).addEventListener("input", e => {
 
-  const results = searchDocs(e.target.value);
+  const query = e.target.value;
+  lastQuery   = query;
 
-  renderResults(results);
+  if (query.length >= 2) {
+    lastResults = searchDocs(query);
+    renderResults(lastResults, query);
+  } else {
+    hideSearchPanel();
+  }
 
 });
 
+document.getElementById('da-search-close').onclick = () => hideSearchPanel();
+
+document.getElementById('da-search-flag').onclick = () => {
+  renderResults(lastResults, lastQuery);
+};
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') hideSearchPanel();
+});
+
 document.getElementById(CONFIG.dom.homeButton).onclick = () => {
-  location.hash = "";
+  console.log("button clicked")
+  loadHomePage();
 };
 
 
@@ -485,7 +558,7 @@ document.getElementById(CONFIG.dom.homeButton).onclick = () => {
 -------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", async () => {
   await loadConfig();
-  await setPageTitle();
+  setPageTitle();
   await loadStyle();
   await loadSearch();
 

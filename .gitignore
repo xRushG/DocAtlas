@@ -1,5 +1,6 @@
 # Markdown content
-/html/md/
+/html/sites/
+/html/index.html
 
 # Specific config
 /html/app.json

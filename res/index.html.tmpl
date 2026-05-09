@@ -3,8 +3,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>DocAtlas</title>
-		<link rel="stylesheet" href="assets/default.style.css">
-		<link rel="stylesheet" href="assets/docatlas.style.css">
+		<link rel="stylesheet" href="assets/style.css">
 		<link rel="stylesheet" href="lib/highlight.min.css">		
 	</head>
 	<body>
@@ -21,10 +20,15 @@
 			<button id="da-themeToggle-btn" title="Theme wechseln">🌓</button>
 		</div>
 		
+		<div id="da-search-panel">
+			<button id="da-search-close" title="Schließen">✕</button>
+			<div id="da-search-panel-inner"></div>
+		</div>
+		<button id="da-search-flag" title="Suchergebnisse anzeigen">&#8981</button>
+
 		<div id="da-content-div">Lade...</div>
 			
 		<!-- lokal -->
-		<script src="lib/marked.min.js"></script>
 		<script src="lib/minisearch.min.js"></script>
 		<script src="lib/highlight.min.js"></script>
 		<script src="app.js"></script>

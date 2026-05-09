@@ -1,6 +1,36 @@
-# DocAtlas MarkDown Help
+# DocAtlas MarkDown Features
 
-## Overview
+## Table of Contents (TOC)
+
+The build process can automatically generate a Table of Contents (TOC).  
+This feature creates a Markdown file inside the output directory.
+
+To enable TOC mode, the document should begin with:
+
+```md
+::DA:TOC
+# Content
+````
+
+The `::DA:TOC` command itself produces no visible output.
+Instead, it acts as an instruction for the build process.
+
+If no TOC exists in the document, the compiler may automatically generate one.
+If a TOC already exists, no additional TOC will be generated. However, the compiler can still interpret the command and apply TOC-specific handling.
+
+This allows the compiler to distinguish a TOC list from a regular Markdown list.
+
+During HTML generation, the following class is automatically added:
+
+```html
+<ul class="da-toc-list">
+```
+
+The final styling and behavior are handled entirely through CSS.
+
+---
+
+## Overview DocAtlas Boxes
 DocAtlas extends ordinary Markdown with **semantic boxes** (call‑outs).  
 A box is defined by a simple prefix and is turned into a styled HTML block when rendered.
 
@@ -9,13 +39,17 @@ A box is defined by a simple prefix and is turned into a styled HTML block when 
 ## Syntax
 
 ```md
+
 ::da:<type> <Title>
 Your content here…
 ::da:end
+
 ```
 
-*`<type>`* – one of the supported box‑types (see the list below)  
+*`<type>`*  – one of the supported box‑types (see the list below) 
+
 *`<Title>`* – the heading that will appear on the box (required for a proper rendering)
+
 
 **Example**
 
