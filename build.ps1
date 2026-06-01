@@ -157,7 +157,12 @@ function Optimize-ConfigValues {
     )
 
     # Normalise trailing separator -- accept both \ and /
-    $config.environment.htmlSrcFolder = $config.environment.htmlSrcFolder.TrimEnd('\', '/') + '/'
+    $config.environment.buildFolder  = $config.environment.buildFolder.TrimEnd('\', '/') + '/'
+    $config.environment.sitesFolder  = $config.environment.sitesFolder.TrimEnd('\', '/') + '/'
+    $config.environment.cssFolder    = $config.environment.cssFolder.TrimEnd('\', '/') + '/'
+    $config.environment.libFolder    = $config.environment.libFolder.TrimEnd('\', '/') + '/'
+    $config.environment.assetsFolder = $config.environment.assetsFolder.TrimEnd('\', '/') + '/'
+
     $config.environment.allowedMedia  = $config.environment.allowedMedia -split(',')
 
     return $config
@@ -742,8 +747,6 @@ function Publish-MarkdownFiles {
     }
 }
 
-# Convert-DocAtlasMarkDown is provided by res\DocAtlasMarkdown.psm1
-
 # --------------------------------------------------
 # Prepare build environment
 # --------------------------------------------------
@@ -751,6 +754,8 @@ Write-Host "Preparing build environment..." -ForegroundColor Cyan
 
 # Save the script directory as root for all relative paths
 $scriptRoot = $PSScriptRoot
+$srcDir = Join-Path $scriptRoot "src"
+$resDir = Join-Path $scriptRoot "res"
 
 # If no INI file was passed, fall back to build.ini next to the script
 if (-not $PSBoundParameters.ContainsKey("ini")) {
@@ -764,44 +769,58 @@ if ($ParseConf.debug.enabled) {
 }
 $ParseConf = Set-DebugConfig -config $ParseConf -SCRIPT_ROOT $scriptRoot
 $buildConf = $ParseConf | Optimize-ConfigValues
+$buildDir  = Join-Path $scriptRoot $buildConf.environment.buildFolder
 
-# Source and build paths
-$src   = Join-Path $scriptRoot "src"
-$build = Join-Path $scriptRoot "html"
+# Source paths — template / static files in $resDir
+$res = @{
+    IndexHTML  = Join-Path $resDir "index.html.tmpl"
+    Css        = Join-Path $resDir $buildConf.environment.cssFolder
+    Lib        = Join-Path $resDir $buildConf.environment.libFolder
+    Assets     = Join-Path $resDir $buildConf.environment.assetsFolder
+    JavaScript = Join-Path $resDir "app.js"
+}
 
+# Output paths — generated / copied destinations in $buildDir
+$out = @{
+    Sites       = Join-Path $buildDir $buildConf.environment.sitesFolder
+    IndexHTML   = Join-Path $buildDir "index.html"
+    Css         = Join-Path $buildDir $buildConf.environment.cssFolder
+    Lib         = Join-Path $buildDir $buildConf.environment.libFolder
+    Assets      = Join-Path $buildDir $buildConf.environment.assetsFolder
+    JavaScript  = Join-Path $buildDir "app.js"
+    AppConfig   = Join-Path $buildDir "app.json"
+    SearchIndex = Join-Path $buildDir $buildConf.environment.searchIndexFile
+    Debug       = $buildConf.debug.outPath
+}
 
-# Output file paths
-$outAppConfig   = Join-Path $build "app.json"
-$outHtml          = Join-Path $build $buildConf.environment.htmlSrcFolder
-$outSearchIndex = Join-Path $build $buildConf.environment.searchIndex
-$outDebug       = $buildConf.debug.outPath
-$outIndexHTML   = Join-Path $build "index.html"
 
 # Clean up the build directory
 Write-Host "Cleaning up build directory..." -ForegroundColor Cyan
-Remove-Item $outHtml        -Recurse -Force -ErrorAction Ignore | Out-Null
-Remove-Item $outDebug       -Recurse -Force -ErrorAction Ignore | Out-Null
-Remove-Item $outAppConfig   -Force   -ErrorAction Ignore | Out-Null
-Remove-Item $outSearchIndex -Force   -ErrorAction Ignore | Out-Null
-Remove-Item $outIndexHTML   -Force   -ErrorAction Ignore | Out-Null
+Remove-Item $buildDir       -Recurse -Force -ErrorAction Ignore | Out-Null
+Remove-Item $out.Debug      -Recurse -Force -ErrorAction Ignore | Out-Null
 
-New-Item -ItemType Directory -Path $outHtml | Out-Null
+New-Item -ItemType Directory -Path $buildDir    | Out-Null
+New-Item -ItemType Directory -Path $out.Sites   | Out-Null
+New-Item -ItemType Directory -Path $out.Css     | Out-Null
+New-Item -ItemType Directory -Path $out.Lib     | Out-Null
+New-Item -ItemType Directory -Path $out.Assets  | Out-Null
+
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] Creating debug output directory..." -ForegroundColor Gray
-    Write-Host "$("   " * 2)'$outDebug'" -ForegroundColor DarkMagenta
-    New-Item -ItemType Directory -Path $outDebug | Out-Null
+    Write-Host "$("   " * 2)'$($out.Debug)'" -ForegroundColor DarkMagenta
+    New-Item -ItemType Directory -Path $out.Debug | Out-Null
 }
 
 # --------------------------------------------------
 # Scan source and build tree structure
 # --------------------------------------------------
 Write-Host "Scanning source directory and building tree structure..." -ForegroundColor Cyan
-$tree = Build-Tree -BasePath $src
+$tree = Build-Tree -BasePath $srcDir
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug]  $("   " * 1) Writing tree structure to JSON..." -ForegroundColor Gray
-    $tree | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.tree_default) -Encoding UTF8
+    $tree | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $out.Debug $buildConf.debug.tree_default) -Encoding UTF8
     Write-Host "[Debug] $("   " * 2) Build tree structure complete." -ForegroundColor DarkGreen
 }
 
@@ -815,12 +834,12 @@ if ($null -eq $tree) {
 # Copy source files to build directory
 # --------------------------------------------------
 Write-Host "Copying source files to build directory..." -ForegroundColor Cyan
-Publish-MarkdownFiles -Source $src -Destination $outHtml
+Publish-MarkdownFiles -Source $srcDir -Destination $out.Sites
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug]  $("   " * 1) Source files copied to" -ForegroundColor Gray
-    Write-Host "$("   " * 2) '$outHtml'" -ForegroundColor DarkMagenta
-    $mediaRegistryPath = Join-Path $outDebug $buildConf.debug.mediaRegistry
+    Write-Host "$("   " * 2) '$($out.Sites)'" -ForegroundColor DarkMagenta
+    $mediaRegistryPath = Join-Path $out.Debug $buildConf.debug.mediaRegistry
     Get-MediaRegistry | ConvertTo-Json | Set-Content $mediaRegistryPath -Encoding UTF8
     Write-Host "[Debug] $("   " * 1) Media registry written to '$mediaRegistryPath'." -ForegroundColor DarkGreen
 }
@@ -833,7 +852,7 @@ $nav = ,@(Build-Navigation $tree)
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 1) Writing debug navigation structure to JSON..." -ForegroundColor Gray
-    $nav | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.navigation) -Encoding UTF8
+    $nav | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $out.Debug $buildConf.debug.navigation) -Encoding UTF8
     Write-Host "[Debug] $("   " * 2) Debug navigation structure complete." -ForegroundColor Gray
 }
 
@@ -853,7 +872,7 @@ if ($buildConf.tableOfContents.enabled) {
 
         if ($tocCollection[$i].file -like "*TableOfContent.html") {
 
-            $indexhtml      = Join-Path $outHtml $tocCollection[$i].file
+            $indexhtml      = Join-Path $out.Sites $tocCollection[$i].file
             $indexPlacement = $indexhtml | Split-Path
             $indexmd        = [System.IO.Path]::ChangeExtension($indexhtml, ".md")
 
@@ -891,13 +910,13 @@ $searchIndex = ,@(Build-SearchIndex $tree)
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 1) Writing debug search index to JSON..." -ForegroundColor Gray
-    $searchIndex | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.globalSearchIndex) -Encoding UTF8
+    $searchIndex | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $out.Debug $buildConf.debug.globalSearchIndex) -Encoding UTF8
     Write-Host "[Debug] $("   " * 2) Debug search index complete." -ForegroundColor Gray
 }
 
 $searchIndex |
     ConvertTo-Json -Depth 5 |
-    Set-Content $outSearchIndex -Encoding UTF8
+    Set-Content $out.SearchIndex -Encoding UTF8
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 1) Search index files generated." -ForegroundColor DarkGreen
@@ -918,14 +937,14 @@ foreach ($prop in $buildConf.PSObject.Properties) {
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 1) Writing debug application configuration to JSON..." -ForegroundColor Gray
-    $appConfig | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $outDebug $buildConf.debug.appConfig) -Encoding UTF8
+    $appConfig | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $out.Debug $buildConf.debug.appConfig) -Encoding UTF8
     Write-Host "[Debug] $("   " * 2) Debug application configuration complete." -ForegroundColor Gray
 }
 
 # Double backslashes produced by ConvertTo-Json are normalised to forward slashes
 # so that paths in app.json are valid URL components on all platforms.
 ($appConfig | ConvertTo-Json -Depth 5) -replace "\\\\", "/" |
-    Set-Content $outAppConfig -Encoding UTF8
+    Set-Content $out.AppConfig -Encoding UTF8
 
 if ($buildConf.debug.enabled) {
     Write-Host "[Debug] $("   " * 1) Application configuration files generated." -ForegroundColor DarkGreen
@@ -985,18 +1004,26 @@ function Build-NavGroupedHtml {
 }
 
 Write-Host "Building index.html from template..." -ForegroundColor Cyan
-$tmplPath   = Join-Path $scriptRoot "res\index.html.tmpl"
-$tmplContent = Get-Content $tmplPath -Raw -Encoding UTF8
+
+$tmplContent = Get-Content $res.IndexHTML -Raw -Encoding UTF8
 
 $navItems = @($nav[0] | Where-Object { $_.level -gt 1 })
 $navHtml  = (Build-NavGroupedHtml $navItems 0 2).Html
 $tmplContent = $tmplContent -replace '<div id="da-navigation-div"></div>', "<div id=`"da-navigation-div`">`n`t`t`t`t$navHtml`n`t`t`t</div>"
 
-Set-Content $outIndexHTML $tmplContent -Encoding UTF8
+Set-Content $out.IndexHTML $tmplContent -Encoding UTF8
 
 if ($buildConf.debug.enabled) {
-    Write-Host "[Debug] $("   " * 1) index.html written to '$outIndexHTML'." -ForegroundColor DarkGreen
+    Write-Host "[Debug] $("   " * 1) index.html written to '$($out.IndexHTML)'." -ForegroundColor DarkGreen
 }
+
+# --------------------------------------------------
+# Copy requirements
+# --------------------------------------------------
+Copy-Item ($res.Css + '\*')    $out.Css    -Force
+Copy-Item ($res.Lib + '\*')    $out.Lib    -Force
+Copy-Item ($res.Assets + '\*') $out.Assets -Force
+Copy-Item $res.JavaScript      $out.JavaScript
 
 # --------------------------------------------------
 # Build complete

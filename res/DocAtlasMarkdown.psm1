@@ -469,8 +469,14 @@ function Flush-Table {
         $cells = ($row -split '\s*\|\s*') | Where-Object { $_ -ne '' }
 
         $script:Output.Add('<tr>')
+        try {
+            $cellCount = $cells.Count
+        }
+        catch {
+            $cellCount = 1
+        }
 
-        for ($i = 0; $i -lt $cells.Count; $i++) {
+        for ($i = 0; $i -lt $cellCount; $i++) {
             $align = if ($script:TableAlign.Count -gt $i) { $script:TableAlign[$i] } else { 'left' }
             $script:Output.Add("<td class=`"td-align-$align`">$(Apply-Inline $cells[$i])</td>")
         }
