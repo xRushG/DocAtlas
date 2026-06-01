@@ -346,7 +346,26 @@ async function loadSearch() {
     idField: 'href'
   });
 
-  miniSearch.addAll(docs);
+  const seen = new Map();
+  const duplicates = [];
+
+  for (const doc of docs) {
+    const id = doc[miniSearch.idField ?? 'href'];
+    if (seen.has(id)) {
+      duplicates.push({ id, first: seen.get(id), duplicate: doc });
+    } else {
+      seen.set(id, doc);
+    }
+  }
+
+  if (duplicates.length > 0) {
+    console.warn(
+      `[DocAtlas Search] ${duplicates.length} duplicate ID(s) found in search index — skipping duplicates:\n` +
+      duplicates.map(d => `  • "${d.id}"\n    first:     ${d.first.href}\n    duplicate: ${d.duplicate.href}`).join('\n')
+    );
+  }
+
+  miniSearch.addAll([...seen.values()]);
 
 }
 
