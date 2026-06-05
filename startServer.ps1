@@ -18,7 +18,14 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 }
 
 if (-not $PSBoundParameters.ContainsKey("DocsRoot")) {
-    $DocsRoot = Join-Path $PSScriptRoot "html"
+    $ini   = Join-Path $PSScriptRoot "build.ini"
+    $match = Get-Content $ini | Select-String '^\s*buildFolder\s*=\s*"?([^"]+)"?'
+
+    if ($match) { 
+        $DocsRoot = Join-Path $PSScriptRoot $match.Matches.Groups[1].Value 
+    } else { 
+        $DocsRoot = Join-Path $PSScriptRoot "html" 
+    }
 }
 
 if (-not $PSBoundParameters.ContainsKey("Port")) {

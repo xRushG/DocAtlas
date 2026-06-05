@@ -1,13 +1,5 @@
 # Markdown content
-/html/sites/
-/html/index.html
-
-# Specific config
-/html/app.json
-
-# Generated assets
-/html/assets/navigation.json
-/html/assets/search-index.json
+/html
 
 
 # Ignore debug folder

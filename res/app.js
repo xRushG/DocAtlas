@@ -227,7 +227,7 @@ function loadHomePage() {
  * Rewrites relative image paths, applies syntax highlighting, injects copy buttons,
  * updates the URL hash, and marks the active navigation entry.
  *
- * @param {string}  file  - Path to the HTML file relative to htmlSrcFolder.
+ * @param {string}  file  - Path to the HTML file relative to sitesFolder.
  * @param {boolean} push  - Whether to push the slug to the URL hash.
  * @param {string}  slug  - Navigation slug identifying this page.
  */
@@ -236,12 +236,12 @@ file = file.replaceAll("\\", "/");
   try {
 	
     const htmlFile = file.replace(/\.md$/, ".html");
-    const res = await fetch(APPCONFIG.environment.htmlSrcFolder + htmlFile);
+    const res = await fetch(APPCONFIG.environment.sitesFolder + htmlFile);
 
     const html = await res.text();
 
 	const basePath =
-      APPCONFIG.environment.htmlSrcFolder +
+      APPCONFIG.environment.sitesFolder +
       file.substring(0, file.lastIndexOf("/") + 1);
 
     const contentDiv = document.getElementById(CONFIG.dom.content);
@@ -337,7 +337,7 @@ file = file.replaceAll("\\", "/");
  */
 async function loadSearch() {
 
-  const res = await fetch(APPCONFIG.environment.searchIndex);
+  const res = await fetch(APPCONFIG.environment.searchIndexFile);
   const docs = await res.json();
 
   miniSearch = new MiniSearch({
@@ -346,7 +346,26 @@ async function loadSearch() {
     idField: 'href'
   });
 
-  miniSearch.addAll(docs);
+  const seen = new Map();
+  const duplicates = [];
+
+  for (const doc of docs) {
+    const id = doc[miniSearch.idField ?? 'href'];
+    if (seen.has(id)) {
+      duplicates.push({ id, first: seen.get(id), duplicate: doc });
+    } else {
+      seen.set(id, doc);
+    }
+  }
+
+  if (duplicates.length > 0) {
+    console.warn(
+      `[DocAtlas Search] ${duplicates.length} duplicate ID(s) found in search index — skipping duplicates:\n` +
+      duplicates.map(d => `  • "${d.id}"\n    first:     ${d.first.href}\n    duplicate: ${d.duplicate.href}`).join('\n')
+    );
+  }
+
+  miniSearch.addAll([...seen.values()]);
 
 }
 

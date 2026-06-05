@@ -21,7 +21,7 @@ $OutFile = "highlight.min.js"
 
 # Default setzen wenn nicht übergeben
 if (-not $PSBoundParameters.ContainsKey("TargetDir")) {
-    $TargetDir = Join-Path ($ScRoot | Split-Path) "html\lib"
+    $TargetDir = Join-Path ($ScRoot | Split-Path) "res\lib"
 }
 
 # Download URL
