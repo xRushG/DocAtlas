@@ -84,15 +84,33 @@ function Read-IniFile {
 function Get-DocumentConfig {
     param($IniConfig)
 
-    $doc = $IniConfig.document
-    $dbg = $IniConfig.debug
-    $toc = $IniConfig.tableOfContents
+    $doc  = $IniConfig.document
+    $dbg  = $IniConfig.debug
+    $toc  = $IniConfig.tableOfContents
+    $logo = $IniConfig.logo
+
+    # Resolve [logo] document → absolute filesystem path for the PDF default
+    $logoDocPath = $null
+    if (-not [string]::IsNullOrWhiteSpace($logo.document)) {
+        $rel       = ($logo.document -replace '/', '\').TrimStart('\')
+        $candidate = Join-Path $ProjectRoot ("res\" + $rel)
+        if (Test-Path -LiteralPath $candidate) { $logoDocPath = $candidate }
+    }
+
+    # Always produce an absolute path — resolve relative entries against $ProjectRoot
+    $rawLogoPath = $doc.LogoPath ? [string]$doc.LogoPath :
+                   $logoDocPath  ? $logoDocPath           :
+                   (Join-Path $ProjectRoot "res\assets\logo-light.svg")
+    $absLogoPath = if ([System.IO.Path]::IsPathRooted($rawLogoPath)) { $rawLogoPath }
+                   else { Join-Path $ProjectRoot $rawLogoPath }
 
     @{
-        LogoPath           = $doc?.LogoPath           ? $doc.LogoPath : (Join-Path $ProjectRoot "res\assets\logo-light.png")
-        LogoPosition       = $doc?.LogoPosition       ? $doc.LogoPosition : 'Right'
+        Logo               = $null -ne $doc?.Logo ? [bool]$doc.Logo : $true
+        LogoAllPages       = $null -ne $doc?.LogoAllPages ? [bool]$doc.LogoAllPages : $false
+        LogoPath           = $absLogoPath
+        LogoPosition       = $doc.LogoPosition       ? $doc.LogoPosition : 'Right'
         PageNumbers        = $null -ne $doc?.PageNumbers ? [bool]$doc.PageNumbers : $true
-        PageNumberPosition = $doc?.PageNumberPosition ? $doc.PageNumberPosition : 'Center'
+        PageNumberPosition = $doc.PageNumberPosition ? $doc.PageNumberPosition : 'Center'
 
         OutputDirectory    = $doc?.OutputDirectory `
             ? (($doc.OutputDirectory -replace '%ScriptRoot%', $ProjectRoot))
@@ -102,6 +120,7 @@ function Get-DocumentConfig {
         FooterHeight       = $null -ne $doc.FooterHeight ? [double]$doc.FooterHeight : 1.0
 
         MarginTop          = $null -ne $doc.MarginTop ? [double]$doc.MarginTop : 1.0
+        MarginTopFirst     = $null -ne $doc.MarginTopFirst ? [double]$doc.MarginTopFirst : 1.0
         MarginBottom       = $null -ne $doc.MarginBottom ? [double]$doc.MarginBottom : 1.0
         MarginLeft         = $null -ne $doc.MarginLeft ? [double]$doc.MarginLeft : 1.0
         MarginRight        = $null -ne $doc.MarginRight ? [double]$doc.MarginRight : 1.0
@@ -140,6 +159,8 @@ function Write-IniSection {
 
 function Save-DocumentConfig {
     param(
+        [bool]   $Logo,
+        [bool]   $LogoAllPages,
         [string] $LogoPath,
         [string] $LogoPosition,
         [bool]   $PageNumbers,
@@ -148,6 +169,7 @@ function Save-DocumentConfig {
         [double] $HeaderHeight,
         [double] $FooterHeight,
         [double] $MarginTop,
+        [double] $MarginTopFirst,
         [double] $MarginBottom,
         [double] $MarginLeft,
         [double] $MarginRight,
@@ -159,6 +181,8 @@ function Save-DocumentConfig {
     $ic = [System.Globalization.CultureInfo]::InvariantCulture
 
     $values = [ordered]@{
+        Logo               = if ($Logo)         { 'true' } else { 'false' }
+        LogoAllPages       = if ($LogoAllPages)  { 'true' } else { 'false' }
         LogoPath           = $LogoPath
         LogoPosition       = $LogoPosition
         LogoWidth          = $LogoWidth.ToString($ic)
@@ -169,6 +193,7 @@ function Save-DocumentConfig {
         HeaderHeight       = $HeaderHeight.ToString($ic)
         FooterHeight       = $FooterHeight.ToString($ic)
         MarginTop          = $MarginTop.ToString($ic)
+        MarginTopFirst     = $MarginTopFirst.ToString($ic)
         MarginBottom       = $MarginBottom.ToString($ic)
         MarginLeft         = $MarginLeft.ToString($ic)
         MarginRight        = $MarginRight.ToString($ic)
@@ -282,30 +307,38 @@ function Encode-Html {
 function Add-FileToTree {
     param($TreeView, $MdFile, [System.Collections.Generic.List[hashtable]]$Sections)
 
-    $fileNode          = New-Object System.Windows.Forms.TreeNode
-    $fileNode.Text     = $MdFile.Name
-    $fileNode.Checked  = $true
-    $fileNode.Tag      = @{ IsFile = $true; File = $MdFile.FullName }
-    $fileNode.NodeFont = New-Object System.Drawing.Font(
-        $TreeView.Font.FontFamily, $TreeView.Font.Size, [System.Drawing.FontStyle]::Bold)
+    if ($Sections.Count -eq 0) { return }
+
+    # Determine the minimum heading level in this file so that level becomes the
+    # top-level tree entry (handles files that start with h2 instead of h1).
+    $minLevel = ($Sections | Measure-Object -Property Level -Minimum).Minimum
 
     $byLevel = @{}
     foreach ($sec in $Sections) {
         $node         = New-Object System.Windows.Forms.TreeNode
-        $node.Text    = ("#" * $sec.Level) + "  " + $sec.Text
+        $node.Text    = $sec.Text
         $node.Checked = $true
         $node.Tag     = $sec
 
-        $parent = $fileNode
+        # Top-level headings (h1 or whatever the file starts with) → bold
+        if ($sec.Level -eq $minLevel) {
+            $node.NodeFont = New-Object System.Drawing.Font(
+                $TreeView.Font.FontFamily, $TreeView.Font.Size, [System.Drawing.FontStyle]::Bold)
+        }
+
+        # Walk up to find the nearest parent node
+        $parent = $null
         for ($l = $sec.Level - 1; $l -ge 1; $l--) {
             if ($byLevel.ContainsKey($l)) { $parent = $byLevel[$l]; break }
         }
-        $parent.Nodes.Add($node) | Out-Null
-        $byLevel[$sec.Level] = $node
-        @($byLevel.Keys | Where-Object { $_ -gt $sec.Level }) | ForEach-Object { $byLevel.Remove($_) }
-    }
 
-    $TreeView.Nodes.Add($fileNode) | Out-Null
+        if ($parent) { $parent.Nodes.Add($node) | Out-Null }
+        else         { $TreeView.Nodes.Add($node) | Out-Null }
+
+        $byLevel[$sec.Level] = $node
+        @($byLevel.Keys | Where-Object { $_ -gt $sec.Level }) |
+            ForEach-Object { $byLevel.Remove($_) }
+    }
 }
 
 function Set-NodeCheckState {
@@ -358,22 +391,25 @@ function Build-PrintHtml {
         The built CSS is inlined so that Edge headless produces a fully styled PDF. #>
     param(
         [System.Collections.Generic.List[hashtable]] $Sections,
+        [bool]   $Logo          = $true,
+        [bool]   $LogoAllPages  = $false,
         [string] $LogoPath,
         [string] $LogoPosition,   # left | center | right | none
         [bool]   $PageNumbers,
         [string] $PageNumberPos,  # left | center | right
         [string] $OutputPath,
         [string] $InlinedCss,     # pre-loaded CSS from html/css/ + highlight
-        [string] $Orientation   = 'Portrait',
-        [double] $MarginTop     = 1.0,
-        [double] $MarginBottom  = 1.0,
-        [double] $MarginLeft    = 1.0,
-        [double] $MarginRight   = 1.0,
-        [double] $HeaderHeight  = 2.0,
-        [double] $FooterHeight  = 1.0,
-        [double] $LogoWidth     = 5.0,
-        [double] $LogoHeight    = 1.5,
-        [string] $TocHeadline  = 'Table of Contents'
+        [string] $Orientation    = 'Portrait',
+        [double] $MarginTop      = 1.0,
+        [double] $MarginTopFirst = 1.0,
+        [double] $MarginBottom   = 1.0,
+        [double] $MarginLeft     = 1.0,
+        [double] $MarginRight    = 1.0,
+        [double] $HeaderHeight   = 2.0,
+        [double] $FooterHeight   = 1.0,
+        [double] $LogoWidth      = 5.0,
+        [double] $LogoHeight     = 1.5,
+        [string] $TocHeadline   = 'Table of Contents'
     )
 
     # ── Assemble HTML content from already-built sections ──────────────────
@@ -396,36 +432,68 @@ function Build-PrintHtml {
     $tocSb.AppendLine('</ul>') | Out-Null
     $tocSb.AppendLine('</nav>') | Out-Null
 
-    # ── Logo (in-flow, top of first page) ─────────────────────────────────
+    # ── Logo ──────────────────────────────────────────────────────────────
+    $ic        = [System.Globalization.CultureInfo]::InvariantCulture
     $logoHtml  = ''
     $headerCss = ''
-    if ($LogoPosition -ne 'none' -and $LogoPath -and (Test-Path -LiteralPath $LogoPath)) {
+    # Header height: auto-expand to fit logo
+    $effHdrH   = [Math]::Max($HeaderHeight, $LogoHeight)
+
+    $showLogo  = $Logo -and ($LogoPosition -ne 'none') -and $LogoPath -and (Test-Path -LiteralPath $LogoPath)
+    if ($showLogo) {
         $ext  = [System.IO.Path]::GetExtension($LogoPath).ToLower().TrimStart('.')
         $mime = switch ($ext) { 'svg' { 'image/svg+xml' } 'jpg' { 'image/jpeg' } 'jpeg' { 'image/jpeg' } default { 'image/png' } }
         $b64  = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($LogoPath))
 
-        $justify = switch ($LogoPosition.ToLower()) {
-            'left'   { 'flex-start' }
-            'center' { 'center' }
-            default  { 'flex-end' }
-        }
-
-        $ic       = [System.Globalization.CultureInfo]::InvariantCulture
-        $hdrHStr  = $HeaderHeight.ToString($ic)
+        $justify  = switch ($LogoPosition.ToLower()) { 'left' { 'flex-start' } 'center' { 'center' } default { 'flex-end' } }
+        $hdrHStr  = $effHdrH.ToString($ic)
         $logoWStr = $LogoWidth.ToString($ic)
         $logoHStr = $LogoHeight.ToString($ic)
 
-        $logoHtml  = "<div class=""da-header""><img class=""da-logo"" src=""data:$mime;base64,$b64"" alt=""Logo"" /></div>"
-        $headerCss = @"
+        $logoHtml = "<div class=""da-header""><img class=""da-logo"" src=""data:$mime;base64,$b64"" alt=""Logo"" /></div>"
+
+        if ($LogoAllPages) {
+            # position:fixed repeats the header on every page.
+            # top: -hdrH moves the header up into the @page margin area
+            # (@page margin-top = MarginTop + effHdrH, so content starts below).
+            $headerCss = @"
+.da-header {
+  position: fixed !important;
+  top: -${hdrHStr}cm !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: ${hdrHStr}cm !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: $justify !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+  background: white !important;
+}
+.da-logo {
+  width: ${logoWStr}cm !important;
+  height: ${logoHStr}cm !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  display: block !important;
+  margin: 0 !important;
+}
+"@
+        } else {
+            # in-flow: logo appears only on the first page
+            $headerCss = @"
 .da-header {
   width: 100% !important;
   height: ${hdrHStr}cm !important;
   display: flex !important;
   align-items: flex-start !important;
   justify-content: $justify !important;
-  padding-top: 2mm !important;
+  padding: 0 !important;
+  margin: 0 !important;
   page-break-after: avoid;
-  margin-bottom: 0.5em;
   box-sizing: border-box;
 }
 .da-logo {
@@ -435,8 +503,10 @@ function Build-PrintHtml {
   max-height: none !important;
   object-fit: contain !important;
   display: block !important;
+  margin: 0 !important;
 }
 "@
+        }
     }
 
     # ── Page numbers ──────────────────────────────────────────────────────
@@ -447,8 +517,14 @@ function Build-PrintHtml {
     }
 
     # ── @page layout ──────────────────────────────────────────────────────
-    $ic        = [System.Globalization.CultureInfo]::InvariantCulture
-    $effTop    = $MarginTop.ToString($ic)
+    # LogoAllPages: top margin grows by header height so content never overlaps the fixed header
+    if ($showLogo -and $LogoAllPages) {
+        $effTop      = [Math]::Round($MarginTop + $effHdrH, 2).ToString($ic)
+        $firstPageCss = ''   # no :first distinction — all pages have the same header
+    } else {
+        $effTop      = $MarginTop.ToString($ic)
+        $firstPageCss = "@page :first { margin-top: $($MarginTopFirst.ToString($ic))cm; }"
+    }
     $effBottom = [Math]::Round($MarginBottom + $FooterHeight, 2).ToString($ic)
     $mLeft     = $MarginLeft.ToString($ic)
     $mRight    = $MarginRight.ToString($ic)
@@ -466,6 +542,7 @@ $InlinedCss
 
 /* ════ Print layout ════ */
 @page { size: $pageSize; margin: ${effTop}cm ${mRight}cm ${effBottom}cm ${mLeft}cm; }
+$firstPageCss
 $pageNumCss
 
 /* ════ Print overrides ════ */
@@ -526,13 +603,31 @@ h1:first-of-type { page-break-before: avoid; }
 h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }
 pre, table, figure { page-break-inside: avoid; }
 pre { white-space: pre-wrap !important; word-wrap: break-word; }
-img:not(.da-logo) { max-width: 100%; height: auto; }
+img:not(.da-logo) { max-width: 100%; height: auto; box-shadow: 3px 3px 5px rgba(0,0,0,0.18); }
+
+/* details/summary: always fully expanded, styled like a blockquote */
+details {
+  display: block !important;
+  border-left: 4px solid #c0c0c0;
+  background: #f8f8f8;
+  border-radius: 6px;
+  padding: 0.4em 0.8em;
+  margin: 0.8em 0;
+}
+details > summary {
+  list-style: none !important;
+  font-weight: bold;
+  cursor: default;
+  margin-bottom: 0.3em;
+}
+details > summary::marker,
+details > summary::-webkit-details-marker { display: none !important; }
 
 /* ════ Table of Contents ════ */
 .da-toc {
   background: #f0f6ff;
   border-radius: 6px;
-  padding: 18px 22px 14px;
+  padding: 8px 22px 14px;
   margin: 0 0 2.5em;
   page-break-after: always;
 }
@@ -573,6 +668,7 @@ $($tocSb.ToString())
 <div id="da-content-div" class="da-content">
 $frag
 </div>
+<script>document.querySelectorAll('details').forEach(function(d){d.open=true;});</script>
 </body>
 </html>
 "@
@@ -590,13 +686,11 @@ $bFolder   = if ($env_?.buildFolder)   { [string]$env_.buildFolder   } else { 'h
 $sSuffix   = if ($env_?.sitesFolder)   { [string]$env_.sitesFolder   } else { 'sites' }
 $cssSuffix = if ($env_?.cssFolder)     { [string]$env_.cssFolder     } else { 'css' }
 $libSuffix = if ($env_?.libFolder)     { [string]$env_.libFolder     } else { 'lib' }
-$aSuffix   = if ($env_?.assetsFolder)  { [string]$env_.assetsFolder  } else { 'assets' }
 
 $buildDir  = Join-Path $ProjectRoot $bFolder
 $sitesDir  = Join-Path $buildDir    $sSuffix
 $cssDir    = Join-Path $buildDir    $cssSuffix
 $libDir    = Join-Path $buildDir    $libSuffix
-$assetsDir = Join-Path $buildDir    $aSuffix
 
 # ── Build check ───────────────────────────────────────────────────────────
 $buildScript = Join-Path $ProjectRoot 'build.ps1'
@@ -681,10 +775,9 @@ if (Test-Path $hlCss) { $cssPaths.Add($hlCss) }
 
 $script:inlinedCss = Get-InlinedCss -CssPaths $cssPaths
 
-# Default logo from built assets (only when not overridden in INI)
+# No logo path resolved → disable logo rather than guess a file
 if ([string]::IsNullOrWhiteSpace($script:cfg.LogoPath)) {
-    $builtLogo = Join-Path $assetsDir 'logo-light.png'
-    if (Test-Path $builtLogo) { $script:cfg.LogoPath = $builtLogo }
+    $script:cfg.Logo = $false
 }
 
 # Default document name: first H1 found across all loaded files (file order)
@@ -731,21 +824,27 @@ $lblLogo.TextAlign = "MiddleRight"
 
 $txtLogo          = New-Object System.Windows.Forms.TextBox
 $txtLogo.Location = New-Object System.Drawing.Point(58, 22)
-$txtLogo.Size     = New-Object System.Drawing.Size(490, 22)
-$txtLogo.Anchor   = "Top, Left, Right"
+$txtLogo.Size     = New-Object System.Drawing.Size(380, 22)
+$txtLogo.Anchor   = "Top, Left"
 $txtLogo.Text     = $script:cfg.LogoPath
 
 $btnBrowseLogo          = New-Object System.Windows.Forms.Button
 $btnBrowseLogo.Text     = "..."
-$btnBrowseLogo.Location = New-Object System.Drawing.Point(554, 21)
+$btnBrowseLogo.Location = New-Object System.Drawing.Point(442, 21)
 $btnBrowseLogo.Size     = New-Object System.Drawing.Size(34, 24)
-$btnBrowseLogo.Anchor   = "Top, Right"
+$btnBrowseLogo.Anchor   = "Top, Left"
 $btnBrowseLogo.Add_Click({
     $d = New-Object System.Windows.Forms.OpenFileDialog
     $d.Filter = "Image Files|*.png;*.jpg;*.jpeg;*.svg"
     $d.Title  = "Select Logo Image"
     if ($d.ShowDialog() -eq 'OK') { $txtLogo.Text = $d.FileName }
 })
+
+$chkLogo          = New-Object System.Windows.Forms.CheckBox
+$chkLogo.Text     = "Logo enabled"
+$chkLogo.Location = New-Object System.Drawing.Point(482, 22)
+$chkLogo.Size     = New-Object System.Drawing.Size(110, 22)
+$chkLogo.Checked  = $script:cfg.Logo
 
 $lblLogoPos           = New-Object System.Windows.Forms.Label
 $lblLogoPos.Text      = "Position:"
@@ -772,6 +871,12 @@ $rbLogoNone           = New-Object System.Windows.Forms.RadioButton
 $rbLogoNone.Text      = "None"
 $rbLogoNone.Location  = New-Object System.Drawing.Point(335, 52)
 $rbLogoNone.Size      = New-Object System.Drawing.Size(58, 22)
+
+$chkLogoAllPages          = New-Object System.Windows.Forms.CheckBox
+$chkLogoAllPages.Text     = "All pages"
+$chkLogoAllPages.Location = New-Object System.Drawing.Point(400, 52)
+$chkLogoAllPages.Size     = New-Object System.Drawing.Size(88, 22)
+$chkLogoAllPages.Checked  = $script:cfg.LogoAllPages
 
 # Apply logo position from config
 $rbLogoRight.Checked = $true
@@ -865,9 +970,25 @@ $lblLogoHCm.Text      = "cm"
 $lblLogoHCm.Location  = New-Object System.Drawing.Point(271, 118)
 $lblLogoHCm.Size      = New-Object System.Drawing.Size(24, 22)
 
-$grpSettings.Controls.AddRange(@(
-    $lblLogo, $txtLogo, $btnBrowseLogo,
+# All controls whose enabled state is toggled by the "Logo enabled" checkbox —
+# must be built AFTER all logo-size controls are defined above.
+$script:logoControls = @($txtLogo, $btnBrowseLogo,
     $lblLogoPos, $rbLogoLeft, $rbLogoCenter, $rbLogoRight, $rbLogoNone,
+    $chkLogoAllPages,
+    $lblLogoSize, $lblLogoW, $nudLogoW, $lblLogoWCm,
+    $lblLogoH, $nudLogoH, $lblLogoHCm)
+
+$chkLogo.Add_CheckedChanged({
+    $on = $chkLogo.Checked
+    foreach ($c in $script:logoControls) { $c.Enabled = $on }
+})
+
+# Sync initial enabled state
+foreach ($c in $script:logoControls) { $c.Enabled = $chkLogo.Checked }
+
+$grpSettings.Controls.AddRange(@(
+    $lblLogo, $txtLogo, $btnBrowseLogo, $chkLogo,
+    $lblLogoPos, $rbLogoLeft, $rbLogoCenter, $rbLogoRight, $rbLogoNone, $chkLogoAllPages,
     $chkPageNums, $lblPagePos, $rbPageLeft, $rbPageCenter, $rbPageRight,
     $lblLogoSize, $lblLogoW, $nudLogoW, $lblLogoWCm,
     $lblLogoH, $nudLogoH, $lblLogoHCm
@@ -878,7 +999,7 @@ $grpSettings.Controls.AddRange(@(
 $grpPage          = New-Object System.Windows.Forms.GroupBox
 $grpPage.Text     = " Page Settings "
 $grpPage.Location = New-Object System.Drawing.Point(10, 174)
-$grpPage.Size     = New-Object System.Drawing.Size(600, 120)
+$grpPage.Size     = New-Object System.Drawing.Size(600, 152)
 $grpPage.Anchor   = "Top, Left, Right"
 
 $lblOrientation           = New-Object System.Windows.Forms.Label
@@ -1002,24 +1123,43 @@ $lblMCm.Text      = "cm each"
 $lblMCm.Location  = New-Object System.Drawing.Point(430, 88)
 $lblMCm.Size      = New-Object System.Drawing.Size(58, 22)
 
+$lblMTopFirst           = New-Object System.Windows.Forms.Label
+$lblMTopFirst.Text      = "Top (1st page):"
+$lblMTopFirst.Location  = New-Object System.Drawing.Point(10, 120)
+$lblMTopFirst.Size      = New-Object System.Drawing.Size(96, 22)
+$lblMTopFirst.TextAlign = "MiddleRight"
+
+$nudMTopFirst               = New-Object System.Windows.Forms.NumericUpDown
+$nudMTopFirst.Location      = New-Object System.Drawing.Point(110, 118)
+$nudMTopFirst.Size          = New-Object System.Drawing.Size(50, 22)
+$nudMTopFirst.Minimum       = [decimal]0;  $nudMTopFirst.Maximum   = [decimal]10
+$nudMTopFirst.DecimalPlaces = 1;           $nudMTopFirst.Increment = [decimal]0.5
+$nudMTopFirst.Value         = [Math]::Max([decimal]0, [Math]::Min([decimal]10, [decimal]$script:cfg.MarginTopFirst))
+
+$lblMTopFirstCm           = New-Object System.Windows.Forms.Label
+$lblMTopFirstCm.Text      = "cm"
+$lblMTopFirstCm.Location  = New-Object System.Drawing.Point(162, 120)
+$lblMTopFirstCm.Size      = New-Object System.Drawing.Size(24, 22)
+
 $grpPage.Controls.AddRange(@(
     $lblOrientation, $rbPortrait, $rbLandscape,
     $lblHeaderH, $nudHeaderH, $lblHeaderCm,
     $lblFooterH, $nudFooterH, $lblFooterCm,
     $lblMargins,
-    $lblMTop,    $nudMTop,
-    $lblMBottom, $nudMBottom,
-    $lblMLeft,   $nudMLeft,
-    $lblMRight,  $nudMRight,
-    $lblMCm
+    $lblMTop,      $nudMTop,
+    $lblMBottom,   $nudMBottom,
+    $lblMLeft,     $nudMLeft,
+    $lblMRight,    $nudMRight,
+    $lblMCm,
+    $lblMTopFirst, $nudMTopFirst, $lblMTopFirstCm
 ))
 
 # ── Sections GroupBox ─────────────────────────────────────────────────────
 
 $grpSections          = New-Object System.Windows.Forms.GroupBox
 $grpSections.Text     = " Select Sections "
-$grpSections.Location = New-Object System.Drawing.Point(10, 302)
-$grpSections.Size     = New-Object System.Drawing.Size(600, 378)
+$grpSections.Location = New-Object System.Drawing.Point(10, 334)
+$grpSections.Size     = New-Object System.Drawing.Size(600, 346)
 $grpSections.Anchor   = "Top, Left, Right, Bottom"
 
 $btnSelAll          = New-Object System.Windows.Forms.Button
@@ -1034,7 +1174,7 @@ $btnDeselAll.Size     = New-Object System.Drawing.Size(96, 26)
 
 $pnlTree             = New-Object System.Windows.Forms.Panel
 $pnlTree.Location    = New-Object System.Drawing.Point(8, 52)
-$pnlTree.Size        = New-Object System.Drawing.Size(584, 318)
+$pnlTree.Size        = New-Object System.Drawing.Size(584, 286)
 $pnlTree.Anchor      = "Top, Left, Right, Bottom"
 $pnlTree.BorderStyle = "FixedSingle"
 
@@ -1177,28 +1317,32 @@ $btnExport.Add_Click({
                elseif ($rbPageRight.Checked) { 'right' }
                else                          { 'center' }
 
-    $orient  = if ($rbLandscape.Checked) { 'Landscape' } else { 'Portrait' }
-    $hdrH    = [double]$nudHeaderH.Value
-    $ftrH    = [double]$nudFooterH.Value
-    $mTop    = [double]$nudMTop.Value
-    $mBottom = [double]$nudMBottom.Value
-    $mLeft   = [double]$nudMLeft.Value
-    $mRight  = [double]$nudMRight.Value
-    $logoW   = [double]$nudLogoW.Value
-    $logoH   = [double]$nudLogoH.Value
+    $orient     = if ($rbLandscape.Checked) { 'Landscape' } else { 'Portrait' }
+    $hdrH       = [double]$nudHeaderH.Value
+    $ftrH       = [double]$nudFooterH.Value
+    $mTop       = [double]$nudMTop.Value
+    $mTopFirst  = [double]$nudMTopFirst.Value
+    $mBottom    = [double]$nudMBottom.Value
+    $mLeft      = [double]$nudMLeft.Value
+    $mRight     = [double]$nudMRight.Value
+    $logoW      = [double]$nudLogoW.Value
+    $logoH      = [double]$nudLogoH.Value
 
     # ── Persist settings to build.ini ─────────────────────────────────────
     try {
         $ti = (Get-Culture).TextInfo
         Save-DocumentConfig `
+            -Logo               $chkLogo.Checked `
+            -LogoAllPages       $chkLogoAllPages.Checked `
             -LogoPath           $txtLogo.Text.Trim() `
             -LogoPosition       (if ($logoPos -eq 'none') { 'None' } else { $ti.ToTitleCase($logoPos) }) `
             -PageNumbers        $chkPageNums.Checked `
             -PageNumberPosition $ti.ToTitleCase($pagePos) `
             -OutputDirectory    (if ($outDir) { $outDir } else { Join-Path $ProjectRoot "documents" }) `
-            -HeaderHeight       $hdrH `
+            -HeaderHeight       $hdrH ` 
             -FooterHeight       $ftrH `
             -MarginTop          $mTop `
+            -MarginTopFirst     $mTopFirst `
             -MarginBottom       $mBottom `
             -MarginLeft         $mLeft `
             -MarginRight        $mRight `
@@ -1221,18 +1365,21 @@ $btnExport.Add_Click({
 
         Build-PrintHtml `
             -Sections      $secs `
+            -Logo          $chkLogo.Checked `
+            -LogoAllPages  $chkLogoAllPages.Checked `
             -LogoPath      $txtLogo.Text.Trim() `
             -LogoPosition  $logoPos `
             -PageNumbers   $chkPageNums.Checked `
             -PageNumberPos $pagePos `
             -OutputPath    $tmpHtml `
             -InlinedCss    $script:inlinedCss `
-            -Orientation   $orient `
-            -MarginTop     $mTop `
-            -MarginBottom  $mBottom `
-            -MarginLeft    $mLeft `
-            -MarginRight   $mRight `
-            -HeaderHeight  $hdrH `
+            -Orientation    $orient `
+            -MarginTop      $mTop `
+            -MarginTopFirst $mTopFirst `
+            -MarginBottom   $mBottom `
+            -MarginLeft     $mLeft `
+            -MarginRight    $mRight `
+            -HeaderHeight   $hdrH `
             -FooterHeight  $ftrH `
             -LogoWidth     $logoW `
             -LogoHeight    $logoH `
@@ -1255,7 +1402,7 @@ $btnExport.Add_Click({
                                      "--print-to-pdf=`"$outPdf`" `"$fileUri`""
         $psi.UseShellExecute       = $false
         $psi.CreateNoWindow        = $true
-        $psi.RedirectStandardError = $false
+        $psi.RedirectStandardError = $true
 
         $proc = [System.Diagnostics.Process]::Start($psi)
         $proc.WaitForExit()

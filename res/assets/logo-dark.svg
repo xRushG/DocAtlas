@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 80">
+  <defs>
+    <clipPath id="pin-d">
+      <path d="M35,70 L16,38 A22,22 0 1 1 54,38 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- Map-pin background -->
+  <path d="M35,70 L16,38 A22,22 0 1 1 54,38 Z" fill="#1a3a6b"/>
+
+  <!-- Stacked documents (clipped to pin interior) -->
+  <g clip-path="url(#pin-d)">
+    <!-- Back document: light blue, tilted left -->
+    <rect x="10" y="11" width="20" height="25" rx="2"
+          fill="#4A9DD8" transform="rotate(-10,20,23.5)"/>
+    <!-- Middle document: sky blue, slight tilt -->
+    <rect x="12" y="10" width="20" height="25" rx="2"
+          fill="#6CBDE8" transform="rotate(-4,22,22.5)"/>
+    <!-- Front document: white with ruled lines -->
+    <rect x="13" y="8" width="20" height="25" rx="2" fill="#FFFFFF"/>
+    <line x1="16.5" y1="15.5" x2="30"   y2="15.5" stroke="#4A9DE8" stroke-width="1.7" stroke-linecap="round"/>
+    <line x1="16.5" y1="20"   x2="30"   y2="20"   stroke="#4A9DE8" stroke-width="1.7" stroke-linecap="round"/>
+    <line x1="16.5" y1="24.5" x2="27"   y2="24.5" stroke="#4A9DE8" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Magnifying glass (drawn over pin, not clipped) -->
+  <circle cx="38" cy="31" r="11"  fill="#1a3a6b"/>
+  <circle cx="38" cy="31" r="8.5" fill="#F7B731"/>
+  <circle cx="35.5" cy="28.5" r="3" fill="#FAD575" opacity="0.6"/>
+  <!-- Handle -->
+  <line x1="44.5" y1="38" x2="53" y2="46.5"
+        stroke="#1a3a6b" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Wordmark (white for dark backgrounds) -->
+  <text x="68" y="52"
+        font-family="'Segoe UI','Arial',Helvetica,sans-serif"
+        font-size="34" font-weight="700"
+        fill="#FFFFFF">DocAtlas</text>
+</svg>
