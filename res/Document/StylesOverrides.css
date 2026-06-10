@@ -1,0 +1,168 @@
+/* ════ Print overrides ════ */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Body: undo web flex layout */
+body {
+  display: block !important;
+  background: #fff !important;
+  color: #111 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-family: Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.6;
+}
+
+/* Hide all web-only UI elements */
+#da-sidebar-div,
+#da-navigation-div,
+#da-homeAndSearchbar-div,
+#da-home-btn,
+#da-searchBox-div,
+#da-searchBox-ipt,
+#da-search-panel,
+#da-search-flag,
+#da-search-close,
+#da-themeToggle-btn,
+#da-logo-div,
+.nav-item, .nav-group, .nav-children,
+.search-count, .search-empty, .search-result,
+.da-sidebar, .da-nav, .da-topbar,
+header:not(.da-header), nav:not(.da-toc), aside, footer {
+  display: none !important;
+}
+
+/* Remove sidebar margin — content fills full width */
+#da-content-div {
+  margin-left: 0 !important;
+  width: 100% !important;
+  padding: 0 !important;
+  min-height: unset !important;
+}
+
+/* Logo in sidebar — hide, we have .da-header instead */
+#da-logo-div, #da-logo-div img { display: none !important; }
+
+/* Full-width content wrappers */
+.da-page, .da-content, main, article {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Page breaks */
+h1 { page-break-before: always; }
+h1:first-of-type { page-break-before: avoid; }
+h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }
+table, figure { page-break-inside: avoid; }
+img:not(.da-logo) { max-width: 100%; height: auto; box-shadow: 3px 3px 5px rgba(0,0,0,0.18); }
+
+/* details/summary: always fully expanded, styled like a blockquote */
+details {
+  display: block !important;
+  border-left: 4px solid #c0c0c0;
+  background: #f8f8f8;
+  border-radius: 6px;
+  padding: 0.4em 0.8em;
+  margin: 0.8em 0;
+}
+details > summary {
+  list-style: none !important;
+  font-weight: bold;
+  cursor: default;
+  margin-bottom: 0.3em;
+}
+details > summary::marker,
+details > summary::-webkit-details-marker { display: none !important; }
+
+/* ════ Table of Contents ════ */
+.da-toc {
+  background: #f0f6ff;
+  border-radius: 6px;
+  padding: 8px 22px 14px;
+  margin: 0 0 2.5em;
+  page-break-after: always;
+}
+.da-toc-title {
+  font-size: 13pt;
+  font-weight: bold;
+  color: #1a3a6b;
+  margin: 0 0 0.8em;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #c8d8f0;
+}
+.da-toc ul { list-style: none; padding: 0; margin: 0; }
+.da-toc li { line-height: 1.55; }
+.da-toc a  { color: #1a56db; text-decoration: none; }
+.da-toc a:hover { text-decoration: underline; }
+
+/* Level-basiertes Einrücken: jede Ebene +1.4em */
+.da-toc-h1 { padding-left: 0;     font-weight: 700; font-size: 10.5pt; color: #1a3a6b; margin-top: 6px; }
+.da-toc-h2 { padding-left: 1.4em; font-size: 10pt;  color: #1a56db; }
+.da-toc-h3 { padding-left: 2.8em; font-size: 9.5pt; color: #3b70c4; }
+.da-toc-h4 { padding-left: 4.2em; font-size: 9pt;   color: #5585cc; }
+.da-toc-h5 { padding-left: 5.6em; font-size: 9pt;   color: #6a95d4; }
+.da-toc-h6 { padding-left: 7.0em; font-size: 9pt;   color: #7ea5dc; }
+.da-toc-h1 a { color: #1a3a6b; }
+.da-toc-h2 a { color: #1a56db; }
+.da-toc-h3 a { color: #3b70c4; }
+.da-toc-h4 a { color: #5585cc; }
+.da-toc-h5 a { color: #6a95d4; }
+.da-toc-h6 a { color: #7ea5dc; }
+
+/* ════ Code Boxes ════ */
+pre {
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 10pt !important;
+  line-height: 1.1 !important;
+  background-color: #eceded !important;
+  margin: 0.5em 0 !important;
+  padding: 0.05cm 0 !important;
+  border-top:    3pt solid #eceded !important;
+  border-bottom: 3pt solid #eceded !important;
+  border-left:   1pt solid #eceded !important;
+  border-right:  1pt solid #eceded !important;
+  border-radius: 0 !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  page-break-inside: avoid;
+}
+
+/* No gap between consecutive code blocks (same-style no-spacing from Word) */
+pre + pre {
+  margin-top: 0 !important;
+  border-top: none !important;
+  padding-top: 0 !important;
+}
+
+/* Syntax-highlighter handles colors — only reset structure inside pre */
+pre code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* Inline code (not inside a pre block) */
+:not(pre) > code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10pt;
+  background-color: #eceded;
+  padding: 0.1em 0.3em;
+  border-radius: 2px;
+  border: none;
+}
+
+/* ════ Document Title ════ */
+.da-doc-title {
+  font-size: 22pt;
+  font-weight: 800;
+  color: #1a3a6b;
+  margin: 0 0 1.2em;
+  padding-bottom: 0.4em;
+  border-bottom: 2px solid #c8d8f0;
+  page-break-after: avoid;
+}

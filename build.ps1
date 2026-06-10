@@ -762,6 +762,12 @@ if (-not $PSBoundParameters.ContainsKey("ini")) {
     $ini = Join-Path $scriptRoot "build.ini"
 }
 
+# Sync build.ini against template (create if missing, add new keys, flag deprecated)
+. (Join-Path $scriptRoot "res\Sync-BuildIni.ps1")
+Sync-BuildIni `
+    -IniPath      $ini `
+    -TemplatePath (Join-Path $scriptRoot "res\build.ini.tmpl")
+
 # Parse the INI file
 $ParseConf = Read-IniFile -Path $ini
 if ($ParseConf.debug.enabled) {

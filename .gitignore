@@ -2,9 +2,11 @@
 /html
 /documents
 
-
 # Ignore debug folder
 debug/
+
+# build.ini is generated from res/build.ini.tmpl — local config, not tracked
+/build.ini
 
 # Ignore SRC
 src/*

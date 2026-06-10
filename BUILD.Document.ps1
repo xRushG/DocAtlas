@@ -104,6 +104,10 @@ function Get-DocumentConfig {
     $absLogoPath = if ([System.IO.Path]::IsPathRooted($rawLogoPath)) { $rawLogoPath }
                    else { Join-Path $ProjectRoot $rawLogoPath }
 
+    $rawStylePath = ![string]::IsNullOrWhiteSpace($doc.Style) ? [string]$doc.Style : 'res\Document\StylesOverrides.css'
+    $absStylePath = if ([System.IO.Path]::IsPathRooted($rawStylePath)) { $rawStylePath }
+                    else { Join-Path $ProjectRoot $rawStylePath }
+
     @{
         Logo               = $null -ne $doc?.Logo ? [bool]$doc.Logo : $true
         LogoAllPages       = $null -ne $doc?.LogoAllPages ? [bool]$doc.LogoAllPages : $false
@@ -129,6 +133,8 @@ function Get-DocumentConfig {
 
         LogoWidth          = $null -ne $doc.LogoWidth ? [double]$doc.LogoWidth : 5.0
         LogoHeight         = $null -ne $doc.LogoHeight ? [double]$doc.LogoHeight : 1.5
+
+        StyleOverridePath  = $absStylePath
 
         TocHeadline        = $toc.Headline ? [string]$toc.Headline : 'Table of Contents'
 
@@ -202,6 +208,13 @@ function Save-DocumentConfig {
 
     Write-IniSection -Path $IniPath -SectionName 'document' -Values $values
 }
+
+# Sync build.ini against template (create if missing, add new keys, flag deprecated)
+. (Join-Path $ProjectRoot "res\Sync-BuildIni.ps1")
+Sync-BuildIni `
+    -IniPath      $IniPath `
+    -TemplatePath (Join-Path $ProjectRoot "res\build.ini.tmpl") `
+    -UseGui
 
 # Read config at startup
 try   { $iniCfg = Read-IniFile -Path $IniPath }
@@ -305,7 +318,12 @@ function Encode-Html {
 # ══════════════════════════════════════════════════════════════════════════════
 
 function Add-FileToTree {
-    param($TreeView, $MdFile, [System.Collections.Generic.List[hashtable]]$Sections)
+    param(
+        $Parent,    # System.Windows.Forms.TreeView  OR  System.Windows.Forms.TreeNode
+        $TreeFont,  # System.Drawing.Font — used for bold heading nodes
+        $MdFile,
+        [System.Collections.Generic.List[hashtable]]$Sections
+    )
 
     if ($Sections.Count -eq 0) { return }
 
@@ -323,17 +341,17 @@ function Add-FileToTree {
         # Top-level headings (h1 or whatever the file starts with) → bold
         if ($sec.Level -eq $minLevel) {
             $node.NodeFont = New-Object System.Drawing.Font(
-                $TreeView.Font.FontFamily, $TreeView.Font.Size, [System.Drawing.FontStyle]::Bold)
+                $TreeFont.FontFamily, $TreeFont.Size, [System.Drawing.FontStyle]::Bold)
         }
 
         # Walk up to find the nearest parent node
-        $parent = $null
+        $parentNode = $null
         for ($l = $sec.Level - 1; $l -ge 1; $l--) {
-            if ($byLevel.ContainsKey($l)) { $parent = $byLevel[$l]; break }
+            if ($byLevel.ContainsKey($l)) { $parentNode = $byLevel[$l]; break }
         }
 
-        if ($parent) { $parent.Nodes.Add($node) | Out-Null }
-        else         { $TreeView.Nodes.Add($node) | Out-Null }
+        if ($parentNode) { $parentNode.Nodes.Add($node) | Out-Null }
+        else             { $Parent.Nodes.Add($node) | Out-Null }
 
         $byLevel[$sec.Level] = $node
         @($byLevel.Keys | Where-Object { $_ -gt $sec.Level }) |
@@ -409,7 +427,10 @@ function Build-PrintHtml {
         [double] $FooterHeight   = 1.0,
         [double] $LogoWidth      = 5.0,
         [double] $LogoHeight     = 1.5,
-        [string] $TocHeadline   = 'Table of Contents'
+        [string] $TocHeadline   = 'Table of Contents',
+        [string] $DocTitle      = '',
+        [string] $PdfTitle      = '',
+        [string] $OverrideCss   = ''
     )
 
     # ── Assemble HTML content from already-built sections ──────────────────
@@ -530,12 +551,18 @@ function Build-PrintHtml {
     $mRight    = $MarginRight.ToString($ic)
     $pageSize  = "A4 $(if ($Orientation -eq 'Landscape') { 'landscape' } else { 'portrait' })"
 
+    # ── Document title (optional — rendered above TOC) ───────────────────
+    $titleHtml = if (-not [string]::IsNullOrWhiteSpace($DocTitle)) {
+        "<div class=""da-doc-title"">$(Encode-Html $DocTitle)</div>"
+    } else { '' }
+
     # ── Full HTML (inlined CSS + print overrides + content) ───────────────
     $html = @"
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>$(Encode-Html $PdfTitle)</title>
 <style>
 /* ════ Inlined build CSS ════ */
 $InlinedCss
@@ -545,118 +572,7 @@ $InlinedCss
 $firstPageCss
 $pageNumCss
 
-/* ════ Print overrides ════ */
-*, *::before, *::after { box-sizing: border-box; }
-
-/* Body: undo web flex layout */
-body {
-  display: block !important;
-  background: #fff !important;
-  color: #111 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  font-family: Arial, sans-serif;
-  font-size: 11pt;
-  line-height: 1.6;
-}
-
-/* Hide all web-only UI elements */
-#da-sidebar-div,
-#da-navigation-div,
-#da-homeAndSearchbar-div,
-#da-home-btn,
-#da-searchBox-div,
-#da-searchBox-ipt,
-#da-search-panel,
-#da-search-flag,
-#da-search-close,
-#da-themeToggle-btn,
-#da-logo-div,
-.nav-item, .nav-group, .nav-children,
-.search-count, .search-empty, .search-result,
-.da-sidebar, .da-nav, .da-topbar,
-header:not(.da-header), nav:not(.da-toc), aside, footer {
-  display: none !important;
-}
-
-/* Remove sidebar margin — content fills full width */
-#da-content-div {
-  margin-left: 0 !important;
-  width: 100% !important;
-  padding: 0 !important;
-  min-height: unset !important;
-}
-
-/* Logo in sidebar — hide, we have .da-header instead */
-#da-logo-div, #da-logo-div img { display: none !important; }
-
-/* Full-width content wrappers */
-.da-page, .da-content, main, article {
-  max-width: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Page breaks */
-h1 { page-break-before: always; }
-h1:first-of-type { page-break-before: avoid; }
-h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }
-pre, table, figure { page-break-inside: avoid; }
-pre { white-space: pre-wrap !important; word-wrap: break-word; }
-img:not(.da-logo) { max-width: 100%; height: auto; box-shadow: 3px 3px 5px rgba(0,0,0,0.18); }
-
-/* details/summary: always fully expanded, styled like a blockquote */
-details {
-  display: block !important;
-  border-left: 4px solid #c0c0c0;
-  background: #f8f8f8;
-  border-radius: 6px;
-  padding: 0.4em 0.8em;
-  margin: 0.8em 0;
-}
-details > summary {
-  list-style: none !important;
-  font-weight: bold;
-  cursor: default;
-  margin-bottom: 0.3em;
-}
-details > summary::marker,
-details > summary::-webkit-details-marker { display: none !important; }
-
-/* ════ Table of Contents ════ */
-.da-toc {
-  background: #f0f6ff;
-  border-radius: 6px;
-  padding: 8px 22px 14px;
-  margin: 0 0 2.5em;
-  page-break-after: always;
-}
-.da-toc-title {
-  font-size: 13pt;
-  font-weight: bold;
-  color: #1a3a6b;
-  margin: 0 0 0.8em;
-  padding-bottom: 6px;
-  border-bottom: 2px solid #c8d8f0;
-}
-.da-toc ul { list-style: none; padding: 0; margin: 0; }
-.da-toc li { line-height: 1.55; }
-.da-toc a  { color: #1a56db; text-decoration: none; }
-.da-toc a:hover { text-decoration: underline; }
-
-/* Level-basiertes Einrücken: jede Ebene +1.4em */
-.da-toc-h1 { padding-left: 0;     font-weight: 700; font-size: 10.5pt; color: #1a3a6b; margin-top: 6px; }
-.da-toc-h2 { padding-left: 1.4em; font-size: 10pt;  color: #1a56db; }
-.da-toc-h3 { padding-left: 2.8em; font-size: 9.5pt; color: #3b70c4; }
-.da-toc-h4 { padding-left: 4.2em; font-size: 9pt;   color: #5585cc; }
-.da-toc-h5 { padding-left: 5.6em; font-size: 9pt;   color: #6a95d4; }
-.da-toc-h6 { padding-left: 7.0em; font-size: 9pt;   color: #7ea5dc; }
-.da-toc-h1 a { color: #1a3a6b; }
-.da-toc-h2 a { color: #1a56db; }
-.da-toc-h3 a { color: #3b70c4; }
-.da-toc-h4 a { color: #5585cc; }
-.da-toc-h5 a { color: #6a95d4; }
-.da-toc-h6 a { color: #7ea5dc; }
+$OverrideCss
 
 /* ════ Logo / Header ════ */
 $headerCss
@@ -664,6 +580,7 @@ $headerCss
 </head>
 <body>
 $logoHtml
+$titleHtml
 $($tocSb.ToString())
 <div id="da-content-div" class="da-content">
 $frag
@@ -775,6 +692,27 @@ if (Test-Path $hlCss) { $cssPaths.Add($hlCss) }
 
 $script:inlinedCss = Get-InlinedCss -CssPaths $cssPaths
 
+$script:overrideCss = if (Test-Path -LiteralPath $script:cfg.StyleOverridePath) {
+    Get-Content -LiteralPath $script:cfg.StyleOverridePath -Raw -Encoding UTF8
+} else { '' }
+
+# Build a slug → display title map by parsing the nav-item divs in html/index.html.
+# Each folder has a nav entry whose data-file points to its TableOfContent.html;
+# the div's text content is the human-readable project name shown in the nav.
+# This lets folder nodes in the TreeView use the same titles as the HTML navigation.
+$script:folderTitleMap = @{}
+$mainIndexHtml = Join-Path $buildDir 'index.html'
+if (Test-Path -LiteralPath $mainIndexHtml) {
+    $navContent  = Get-Content -LiteralPath $mainIndexHtml -Raw -Encoding UTF8
+    $tocEscaped  = [regex]::Escape($tocFileName)
+    $folderNavRx = [regex]"data-file=""([^""]*[/\\]$tocEscaped)""[^>]*>([^<]+)<"
+    foreach ($m in $folderNavRx.Matches($navContent)) {
+        $relFile = $m.Groups[1].Value.Replace('/', '\').TrimStart('\')
+        $title   = $m.Groups[2].Value.Trim()
+        if ($relFile -and $title) { $script:folderTitleMap[$relFile.ToLower()] = $title }
+    }
+}
+
 # No logo path resolved → disable logo rather than guess a file
 if ([string]::IsNullOrWhiteSpace($script:cfg.LogoPath)) {
     $script:cfg.Logo = $false
@@ -803,8 +741,8 @@ foreach ($f in $htmlFiles) {
 
 $form             = New-Object System.Windows.Forms.Form
 $form.Text        = "DocAtlas — Document Export  (PDF)"
-$form.ClientSize  = New-Object System.Drawing.Size(620, 800)
-$form.MinimumSize = New-Object System.Drawing.Size(500, 690)
+$form.ClientSize  = New-Object System.Drawing.Size(620, 830)
+$form.MinimumSize = New-Object System.Drawing.Size(500, 720)
 $form.StartPosition = "CenterScreen"
 $form.Font        = New-Object System.Drawing.Font("Segoe UI", 9)
 
@@ -1184,10 +1122,57 @@ $treeView.CheckBoxes    = $true
 $treeView.ShowLines     = $true
 $treeView.HideSelection = $false
 
+# Group HTML files under folder nodes that mirror the sites/ directory hierarchy.
+# Each unique subdirectory under $sitesDir gets one bold folder node whose display
+# name comes from the HTML navigation (falling back to a prettified folder name).
+# Files located directly in $sitesDir are added to the root of the TreeView.
+$folderNodes = @{}   # lower-cased relative dir path → TreeNode
+
 foreach ($f in $htmlFiles) {
     $secs = $allSections[$f.FullName]
-    if ($secs.Count -gt 0) {
-        Add-FileToTree -TreeView $treeView -MdFile $f -Sections $secs
+    if ($secs.Count -eq 0) { continue }
+
+    $relPath = $f.FullName.Substring($sitesDir.TrimEnd('\').Length + 1)
+    $parts   = $relPath -split '[/\\]'
+
+    if ($parts.Count -gt 1) {
+        # Build (or reuse) a folder node for every directory component above the file.
+        for ($i = 0; $i -lt ($parts.Count - 1); $i++) {
+            $seg        = $parts[$i]
+            $relDirPath = ($parts[0..$i]) -join '/'
+            $lookupKey  = $relDirPath.ToLower()
+
+            if (-not $folderNodes.ContainsKey($lookupKey)) {
+                # Prefer the nav title from html/index.html; fall back to prettified name.
+                $tocRelPath  = ($relDirPath -replace '/', '\') + '\' + $tocFileName
+                $folderTitle = $script:folderTitleMap[$tocRelPath.ToLower()]
+                if (-not $folderTitle) {
+                    $folderTitle = (Get-Culture).TextInfo.ToTitleCase(($seg -replace '[_-]', ' '))
+                }
+
+                $folderNode          = New-Object System.Windows.Forms.TreeNode
+                $folderNode.Text     = $folderTitle
+                $folderNode.Checked  = $true
+                $folderNode.Tag      = $null   # not a section — not collected, but children are
+                $folderNode.NodeFont = New-Object System.Drawing.Font(
+                    $treeView.Font.FontFamily, $treeView.Font.Size, [System.Drawing.FontStyle]::Bold)
+
+                if ($i -eq 0) {
+                    $treeView.Nodes.Add($folderNode) | Out-Null
+                } else {
+                    $parentKey = ($parts[0..($i - 1)] -join '/').ToLower()
+                    $folderNodes[$parentKey].Nodes.Add($folderNode) | Out-Null
+                }
+                $folderNodes[$lookupKey] = $folderNode
+            }
+        }
+
+        $parentKey = ($parts[0..($parts.Count - 2)] -join '/').ToLower()
+        Add-FileToTree -Parent $folderNodes[$parentKey] -TreeFont $treeView.Font `
+                       -MdFile $f -Sections $secs
+    } else {
+        Add-FileToTree -Parent $treeView -TreeFont $treeView.Font `
+                       -MdFile $f -Sections $secs
     }
 }
 $treeView.ExpandAll()
@@ -1220,37 +1205,51 @@ $grpSections.Controls.AddRange(@($btnSelAll, $btnDeselAll, $pnlTree))
 
 # ── Output rows ──────────────────────────────────────────────────────────
 
-# Row 1: document name (without extension)
+# Row 1: document title (optional — appears above the TOC in the PDF)
+$lblDocTitle           = New-Object System.Windows.Forms.Label
+$lblDocTitle.Text      = "Dokumenten Titel:"
+$lblDocTitle.Location  = New-Object System.Drawing.Point(10, 692)
+$lblDocTitle.Size      = New-Object System.Drawing.Size(110, 24)
+$lblDocTitle.TextAlign = "MiddleRight"
+$lblDocTitle.Anchor    = "Bottom, Left"
+
+$txtDocTitle          = New-Object System.Windows.Forms.TextBox
+$txtDocTitle.Location = New-Object System.Drawing.Point(124, 692)
+$txtDocTitle.Size     = New-Object System.Drawing.Size(478, 24)
+$txtDocTitle.Anchor   = "Bottom, Left, Right"
+$txtDocTitle.Text     = ''
+
+# Row 2: file name (required — enables Export button)
 $lblFileName           = New-Object System.Windows.Forms.Label
-$lblFileName.Text      = "Name:"
-$lblFileName.Location  = New-Object System.Drawing.Point(10, 692)
-$lblFileName.Size      = New-Object System.Drawing.Size(50, 24)
+$lblFileName.Text      = "Dateiname:"
+$lblFileName.Location  = New-Object System.Drawing.Point(10, 720)
+$lblFileName.Size      = New-Object System.Drawing.Size(110, 24)
 $lblFileName.TextAlign = "MiddleRight"
 $lblFileName.Anchor    = "Bottom, Left"
 
 $txtFileName          = New-Object System.Windows.Forms.TextBox
-$txtFileName.Location = New-Object System.Drawing.Point(64, 692)
-$txtFileName.Size     = New-Object System.Drawing.Size(538, 24)
+$txtFileName.Location = New-Object System.Drawing.Point(124, 720)
+$txtFileName.Size     = New-Object System.Drawing.Size(478, 24)
 $txtFileName.Anchor   = "Bottom, Left, Right"
-$txtFileName.Text     = $script:defaultDocName
+$txtFileName.Text     = ''
 
-# Row 2: output folder
+# Row 3: output folder
 $lblOutDir           = New-Object System.Windows.Forms.Label
 $lblOutDir.Text      = "Path:"
-$lblOutDir.Location  = New-Object System.Drawing.Point(10, 720)
-$lblOutDir.Size      = New-Object System.Drawing.Size(50, 24)
+$lblOutDir.Location  = New-Object System.Drawing.Point(10, 750)
+$lblOutDir.Size      = New-Object System.Drawing.Size(110, 24)
 $lblOutDir.TextAlign = "MiddleRight"
 $lblOutDir.Anchor    = "Bottom, Left"
 
 $txtOutDir          = New-Object System.Windows.Forms.TextBox
-$txtOutDir.Location = New-Object System.Drawing.Point(64, 720)
-$txtOutDir.Size     = New-Object System.Drawing.Size(500, 24)
+$txtOutDir.Location = New-Object System.Drawing.Point(124, 750)
+$txtOutDir.Size     = New-Object System.Drawing.Size(440, 24)
 $txtOutDir.Anchor   = "Bottom, Left, Right"
 $txtOutDir.Text     = $script:cfg.OutputDirectory
 
 $btnBrowseOut          = New-Object System.Windows.Forms.Button
 $btnBrowseOut.Text     = "..."
-$btnBrowseOut.Location = New-Object System.Drawing.Point(568, 719)
+$btnBrowseOut.Location = New-Object System.Drawing.Point(568, 749)
 $btnBrowseOut.Size     = New-Object System.Drawing.Size(34, 26)
 $btnBrowseOut.Anchor   = "Bottom, Right"
 $btnBrowseOut.Add_Click({
@@ -1264,7 +1263,7 @@ $btnBrowseOut.Add_Click({
 
 $btnExport           = New-Object System.Windows.Forms.Button
 $btnExport.Text      = "Export PDF"
-$btnExport.Location  = New-Object System.Drawing.Point(10, 752)
+$btnExport.Location  = New-Object System.Drawing.Point(10, 782)
 $btnExport.Size      = New-Object System.Drawing.Size(600, 40)
 $btnExport.Anchor    = "Bottom, Left, Right"
 $btnExport.BackColor = [System.Drawing.Color]::FromArgb(30, 80, 200)
@@ -1272,6 +1271,18 @@ $btnExport.ForeColor = [System.Drawing.Color]::White
 $btnExport.FlatStyle = "Flat"
 $btnExport.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
 $btnExport.FlatAppearance.BorderSize = 0
+$btnExport.Enabled   = $false
+$btnExport.BackColor = [System.Drawing.Color]::FromArgb(160, 160, 160)
+
+$txtFileName.Add_TextChanged({
+    $hasName = -not [string]::IsNullOrWhiteSpace($txtFileName.Text)
+    $btnExport.Enabled   = $hasName
+    $btnExport.BackColor = if ($hasName) {
+        [System.Drawing.Color]::FromArgb(30, 80, 200)
+    } else {
+        [System.Drawing.Color]::FromArgb(160, 160, 160)
+    }
+})
 
 $btnExport.Add_Click({
     # ── Validate ──────────────────────────────────────────────────────────
@@ -1283,8 +1294,10 @@ $btnExport.Add_Click({
     }
 
     # Build output path from folder + filename
-    $outDir  = $txtOutDir.Text.Trim()
-    $outName = $txtFileName.Text.Trim()
+    $outDir    = $txtOutDir.Text.Trim()
+    $outName   = $txtFileName.Text.Trim()
+    $docTitle  = $txtDocTitle.Text.Trim()
+    $pdfTitle  = if (-not [string]::IsNullOrWhiteSpace($docTitle)) { $docTitle } else { $outName }
     if ([string]::IsNullOrWhiteSpace($outName)) { $outName = $script:defaultDocName }
 
     # Strip invalid filename characters
@@ -1383,7 +1396,10 @@ $btnExport.Add_Click({
             -FooterHeight  $ftrH `
             -LogoWidth     $logoW `
             -LogoHeight    $logoH `
-            -TocHeadline   $script:cfg.TocHeadline
+            -TocHeadline   $script:cfg.TocHeadline `
+            -DocTitle      $docTitle `
+            -PdfTitle      $pdfTitle `
+            -OverrideCss   $script:overrideCss
 
         # ── Debug: save generated HTML before PDF creation ────────────────
         if ($script:cfg.DebugEnabled) {
@@ -1406,6 +1422,12 @@ $btnExport.Add_Click({
 
         $proc = [System.Diagnostics.Process]::Start($psi)
         $proc.WaitForExit()
+
+        # Edge can finish writing the PDF slightly after the process exits — poll up to 10 s
+        $deadline = [DateTime]::Now.AddSeconds(10)
+        while (-not (Test-Path -LiteralPath $outPdf) -and [DateTime]::Now -lt $deadline) {
+            Start-Sleep -Milliseconds 300
+        }
 
         if (($proc.ExitCode -eq 0) -and (Test-Path -LiteralPath $outPdf)) {
             $res = [System.Windows.Forms.MessageBox]::Show(
@@ -1434,6 +1456,7 @@ $form.Controls.AddRange(@(
     $grpPage,
     $grpSections,
     $lblFileName, $txtFileName,
+    $lblDocTitle, $txtDocTitle,
     $lblOutDir, $txtOutDir, $btnBrowseOut,
     $btnExport
 ))
